@@ -29,7 +29,7 @@ export default function PresidentDashboard({user}:{user:any}) {
   const [readerUrl,setReaderUrl]=useState('');
   const [analysis,setAnalysis]=useState('');
   const [readerBusy,setReaderBusy]=useState(false);
-  const refresh=async()=>{setBusy(true);try{const [e,b]=await Promise.all([api<EventItem[]>('/api/v1/my/events'),api<any[]>('/api/v1/budget/requests').catch(()=>[])]);setEvents(e);setBudgets(b)}catch(err:any){setNotice(err.message)}finally{setBusy(false)}};
+  const refresh=async()=>{setBusy(true);try{const [e,b]=await Promise.all([api<EventItem[]>('/api/v1/my/events'),api<any[]>('/api/v1/my/budgets').catch(()=>[])]);setEvents(e);setBudgets(b)}catch(err:any){setNotice(err.message)}finally{setBusy(false)}};
   useEffect(()=>{void refresh()},[]);
   async function createEvent(e:FormEvent){e.preventDefault();try{await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});setNotice('Event submitted for faculty review.');setShowEvent(false);setTitle('');await refresh()}catch(err:any){setNotice(err.message)}}
   async function submitBudget(e:FormEvent){e.preventDefault();const items=Object.entries(amounts).filter(([,v])=>v>0).map(([category,amount])=>({category,amount,justification:remarks}));const total_amount=items.reduce((n,i)=>n+i.amount,0);if(!selectedEvent||!items.length){setNotice('Choose an event and enter at least one budget amount.');return}try{await api('/api/v1/budget/request',{method:'POST',body:JSON.stringify({event_id:selectedEvent,total_amount,items,remarks})});setNotice('Budget request submitted for review.');setShowBudget(false);await refresh()}catch(err:any){setNotice(err.message)}}
