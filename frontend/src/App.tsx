@@ -20,12 +20,16 @@ function Shell({ children, user, onLogout }: any) {
     {to:'/app/profile',label:'Profile',icon:<User size={18}/>},
     {to:'/app/settings',label:'Settings',icon:<Settings size={18}/>}
   ];
+  const presidentLinks = [
+    {to:'/app',label:'President workspace',icon:<LayoutDashboard size={18}/>,end:true},
+    {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>}
+  ];
   const staffLinks = [
     {to:'/app',label:'Overview',icon:<LayoutDashboard size={18}/>,end:true},
     {to:'/app/events',label:'Explore events',icon:<CalendarDays size={18}/>},
     {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>}
   ];
-  const links=student?studentLinks:staffLinks;
+  const links=student?studentLinks:user?.role==='president'?presidentLinks:staffLinks;
   return <div className={student?'app-shell student-shell':'app-shell'}>
     <aside className="sidebar">
       <Link to="/app" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link>
