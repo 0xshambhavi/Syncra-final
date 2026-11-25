@@ -308,30 +308,6 @@ async def register_event(event_id: str, user: dict = Depends(require_role("stude
         NOTIFICATIONS.setdefault(user["id"], []).append({"id":str(uuid4()),"title":"Event schedule conflict","message":f"{event['title']} overlaps with "+", ".join(c["title"] for c in conflicts)+". Review your registered events.","read":False,"type":"schedule_conflict","created_at":datetime.now(timezone.utc).isoformat()})
     return {"message": "Registration successful", "event": event, "conflicts": conflicts}
 
-@app.post("/api/v1/agent/event-assistant")
-async def event_assistant(payload: dict, user: dict = Depends(current_user)):
-    question = str(payload.get("question", "")).strip()
-    event_id = str(payload.get("event_id", "")).strip()
-    if not question or len(question) > 1200: raise HTTPException(status_code=422, detail="Enter a question (up to 1,200 characters)")
-    event = EVENTS.get(event_id)
-    if not event: raise HTTPException(status_code=404, detail="Event not found")
-    # Deterministic grounded fallback. An LLM provider can be enabled with SYNCRA_AI_BASE_URL, SYNCRA_AI_API_KEY and SYNCRA_AI_MODEL.
-    facts = {k:event.get(k) for k in ("title","club","date","time","end_date","end_time","venue","description","tracks","prize_pool","fee","registration_url","discord_url","whatsapp_url","guest_speakers") if event.get(k) is not None}
-    base_url=os.getenv("SYNCRA_AI_BASE_URL","").rstrip("/")
-    api_key=os.getenv("SYNCRA_AI_API_KEY","")
-    model=os.getenv("SYNCRA_AI_MODEL","")
-    if base_url and api_key and model:
-        import urllib.request
-        body=json.dumps({"model":model,"messages":[{"role":"system","content":"Answer only from the supplied event JSON. If a fact is absent, say it is not provided. Never invent links, prices, eligibility or dates."},{"role":"user","content":json.dumps({"question":question,"event":facts})}],"temperature":0.1}).encode()
-        req=urllib.request.Request(base_url+"/chat/completions",data=body,headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"})
-        try:
-            with urllib.request.urlopen(req,timeout=20) as response: result=json.loads(response.read().decode())
-            answer=result["choices"][0]["message"]["content"]
-            return {"answer":answer,"source":"configured_ai","event_id":event_id}
-        except Exception:
-            pass
-    return {"answer":"Here are the confirmed details I can find: "+json.dumps(facts,ensure_ascii=False)+". I don't have an AI provider configured yet, so this is a grounded event-data response rather than an AI-generated answer.","source":"event_data_fallback","ai_configured":False,"event_id":event_id}
-
 @app.get("/api/v1/public/events")
 async def public_events():
     return list(EVENTS.values())
