@@ -40,7 +40,6 @@ CLUBS = [
  {"name":"TEDxBMSIT&M","category":"Ideas and community","tagline":"Ideas worth spreading.","website":"https://www.tedxbmsitm.in/"},
  {"name":"Node","category":"Technology","tagline":"Network of Decentralised Engineers.","website":"https://nodebmsit.live/"},
  {"name":"Web3","category":"Technology","tagline":"Explore decentralised technology.","website":""},
- {"name":"Access Denied","category":"Cybersecurity","tagline":"Learn, explore and secure.","website":""},
  {"name":"AR/VR Club","category":"Extended reality","tagline":"Build immersive experiences.","website":""},
  {"name":"E-Cell","category":"Entrepreneurship","tagline":"Build ideas into ventures.","website":""},
  {"name":"Alterino","category":"Technology","tagline":"Debug, build and compete.","website":""},
@@ -93,7 +92,7 @@ def init_auth_db():
           token TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           expires_at TEXT NOT NULL,created_at TEXT NOT NULL)""")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)")
-        for email,role in [("student@example.edu","student"),("president@example.edu","president"),("faculty@example.edu","faculty")]:
+        for email,role in [("student@example.edu","student"),("faculty@example.edu","faculty")]:
             if not conn.execute("SELECT 1 FROM users WHERE email=?",(email,)).fetchone():
                 uid=str(uuid4()); salt,digest=hash_password("syncra123")
                 conn.execute("INSERT INTO users(id,email,role,password_salt,password_hash,status,email_verified,profile_json,created_at) VALUES(?,?,?,?,?,'active',1,'{}',?)",
@@ -176,8 +175,8 @@ async def health(): return {"status":"healthy","timestamp":datetime.now(timezone
 @app.post("/api/v1/auth/signup",status_code=201)
 async def signup(payload: Signup):
     email=str(payload.email).strip().lower(); validate_institution_email(email)
-    if payload.role=="president" and (not payload.club_name or not payload.position):
-        raise HTTPException(status_code=422,detail="Club name and position are required for Club President access")
+    if payload.role=="president":
+        raise HTTPException(status_code=403,detail="President accounts are invitation-only. Contact the Syncra administrator for an invite.")
     if payload.role=="faculty" and not payload.department:
         raise HTTPException(status_code=422,detail="Department is required for Faculty Coordinator access")
     code=f"{secrets.randbelow(1000000):06d}" if payload.role=="student" else None
