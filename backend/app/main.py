@@ -31,9 +31,20 @@ USERS: dict[str, dict] = {}
 TOKENS: dict[str, str] = {}
 PASSWORDS: dict[str, str] = {}
 EVENTS: dict[str, dict] = {
-    "event-art-talk": {"id":"event-art-talk","title":"Art Talk","club":"Art Club","date":"2026-12-04","time":"14:00","venue":"Auditorium A","description":"A conversation about creativity and design.","capacity":120,"registered":38,"status":"approved"},
-    "event-hackathon": {"id":"event-hackathon","title":"Tech Hackathon","club":"Tech Club","date":"2026-12-08","time":"09:00","venue":"Innovation Lab","description":"Build, learn and collaborate in a campus hackathon.","capacity":80,"registered":54,"status":"approved"},
+    "node-hackathon-2026": {"id":"node-hackathon-2026","title":"NODE 24-Hour Hackathon","club":"Node","event_type":"Hackathon","date":"2026-12-04","time":"10:30","end_date":"2026-12-05","end_time":"10:30","venue":"APJ Abdul Kalam Lab and CV Raman Lab, BMSIT&M","description":"A 24-hour build sprint by NODE (Network of Decentralised Engineers). Explore software tracks, collaborate with builders and compete for the prize pool.","tracks":["Web3 and decentralised applications","AI and machine learning","Open innovation / software engineering"],"prize_pool":15000,"discord_url":"https://discord.gg/node-bmsit","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_NODE_INVITE","club_url":"https://nodebmsit.live/","capacity":200,"registered":0,"fee":0,"status":"approved","demo_links":True},
+    "alterino-debug-2026": {"id":"alterino-debug-2026","title":"Debugging Challenge","club":"Alterino","event_type":"Competition","date":"2026-12-25","time":"09:00","end_date":"2026-12-25","end_time":"15:00","venue":"BSN Auditorium, BMSIT&M","description":"A debugging challenge to test problem-solving and code-reading skills.","prize_pool":5000,"capacity":150,"registered":0,"fee":0,"status":"approved"},
+    "tedx-bmsitm-2026": {"id":"tedx-bmsitm-2026","title":"TEDxBMSIT&M","club":"TEDxBMSIT&M","event_type":"Talks and conference","date":"2026-12-27","time":"10:30","end_date":"2026-12-27","end_time":"16:00","venue":"BSN Auditorium, CV Raman Block, BMSIT&M","description":"A day of ideas and conversations. Demo speaker profiles and registration QR are shown for preview only.","fee":200,"registration_url":"https://example.com/demo-tedx-registration","registration_qr_url":"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fexample.com%2Fdemo-tedx-registration","guest_speakers":[{"name":"Aarav Mehta","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Mira Rao","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Kabir Shah","role":"Demo speaker","affiliation":"Sample profile — not confirmed"}],"club_url":"https://www.tedxbmsitm.in/","capacity":300,"registered":0,"status":"approved","demo_content":True},
+    "codered-2026": {"id":"codered-2026","title":"Code Red '26 — 24-Hour National Hackathon","club":"E-Cell","event_type":"Hackathon","date":"2026-12-27","time":"10:30","end_date":"2026-12-28","end_time":"10:30","venue":"BICEP, BMSIT&M","description":"A 24-hour national hackathon organised by E-Cell.","registration_url":"https://unstop.com/hackathons/codered26-bms-insitute-of-technology-and-management-1810268","discord_url":"https://discord.gg/codered-bmsit-demo","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_CODERED_INVITE","capacity":500,"registered":0,"fee":0,"status":"approved","demo_links":True},
 }
+CLUBS = [
+ {"name":"TEDxBMSIT&M","category":"Ideas and community","tagline":"Ideas worth spreading.","website":"https://www.tedxbmsitm.in/"},
+ {"name":"Node","category":"Technology","tagline":"Network of Decentralised Engineers.","website":"https://nodebmsit.live/"},
+ {"name":"Web3","category":"Technology","tagline":"Explore decentralised technology.","website":""},
+ {"name":"Access Denied","category":"Cybersecurity","tagline":"Learn, explore and secure.","website":""},
+ {"name":"AR/VR Club","category":"Extended reality","tagline":"Build immersive experiences.","website":""},
+ {"name":"E-Cell","category":"Entrepreneurship","tagline":"Build ideas into ventures.","website":""},
+ {"name":"Alterino","category":"Technology","tagline":"Debug, build and compete.","website":""},
+]
 BUDGETS: dict[str, dict] = {}
 NOTIFICATIONS: dict[str, list[dict]] = {}
 REGISTRATIONS: dict[str, set[str]] = {}
@@ -243,6 +254,84 @@ async def logout(authorization: str|None=Header(default=None)):
         with db_connect() as conn: conn.execute("DELETE FROM sessions WHERE token=?",(token,))
     return {"message":"Signed out successfully"}
 
+class ProfileUpdate(BaseModel):
+    full_name: str = Field(min_length=2, max_length=100)
+    student_id: str = Field(min_length=5, max_length=32)
+    profile_picture_url: str | None = Field(default=None, max_length=2000)
+
+def event_datetime(event: dict, end: bool = False):
+    day = event.get("end_date") if end else event.get("date")
+    clock = event.get("end_time") if end else event.get("time")
+    return datetime.fromisoformat(f"{day or event['date']}T{clock or event['time']}")
+
+def find_event_conflicts(user_id: str, candidate_id: str):
+    candidate = EVENTS[candidate_id]
+    conflicts = []
+    for event_id in REGISTRATIONS.get(user_id, set()):
+        other = EVENTS.get(event_id)
+        if not other or event_id == candidate_id: continue
+        if event_datetime(candidate) < event_datetime(other, True) and event_datetime(other) < event_datetime(candidate, True):
+            conflicts.append({"id": other["id"], "title": other["title"], "date": other["date"], "time": other["time"], "end_date": other.get("end_date", other["date"]), "end_time": other.get("end_time", other["time"]), "venue": other["venue"]})
+    return conflicts
+
+@app.get("/api/v1/clubs")
+async def list_clubs(user: dict = Depends(current_user)):
+    return CLUBS
+
+@app.put("/api/v1/profile")
+async def update_profile(payload: ProfileUpdate, user: dict = Depends(require_role("student"))):
+    email = user["email"].lower()
+    usn = payload.student_id.strip().upper()
+    if not email.endswith("@bmsit.in") or email.split("@",1)[0].upper() != usn:
+        raise HTTPException(status_code=422, detail="Your USN must match your verified @bmsit.in email address")
+    with db_connect() as conn:
+        row = conn.execute("SELECT profile_json FROM users WHERE id=?", (user["id"],)).fetchone()
+        profile = json.loads(row["profile_json"] or "{}")
+        profile["full_name"] = payload.full_name.strip()
+        profile["profile_picture_url"] = payload.profile_picture_url
+        conn.execute("UPDATE users SET student_id=?, profile_json=? WHERE id=?", (usn, json.dumps(profile), user["id"]))
+        updated = conn.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+    return public_user(updated)
+
+@app.post("/api/v1/events/{event_id}/register")
+async def register_event(event_id: str, user: dict = Depends(require_role("student", "president", "faculty"))):
+    event = EVENTS.get(event_id)
+    if not event: raise HTTPException(status_code=404, detail="Event not found")
+    registrations = REGISTRATIONS.setdefault(user["id"], set())
+    if event_id in registrations:
+        return {"message": "You are already registered for this event", "event": event, "conflicts": find_event_conflicts(user["id"], event_id)}
+    if event["registered"] >= event["capacity"]: raise HTTPException(status_code=409, detail="This event is full")
+    conflicts = find_event_conflicts(user["id"], event_id)
+    registrations.add(event_id)
+    event["registered"] += 1
+    if conflicts:
+        NOTIFICATIONS.setdefault(user["id"], []).append({"id":str(uuid4()),"title":"Event schedule conflict","message":f"{event['title']} overlaps with "+", ".join(c["title"] for c in conflicts)+". Review your registered events.","read":False,"type":"schedule_conflict","created_at":datetime.now(timezone.utc).isoformat()})
+    return {"message": "Registration successful", "event": event, "conflicts": conflicts}
+
+@app.post("/api/v1/agent/event-assistant")
+async def event_assistant(payload: dict, user: dict = Depends(current_user)):
+    question = str(payload.get("question", "")).strip()
+    event_id = str(payload.get("event_id", "")).strip()
+    if not question or len(question) > 1200: raise HTTPException(status_code=422, detail="Enter a question (up to 1,200 characters)")
+    event = EVENTS.get(event_id)
+    if not event: raise HTTPException(status_code=404, detail="Event not found")
+    # Deterministic grounded fallback. An LLM provider can be enabled with SYNCRA_AI_BASE_URL, SYNCRA_AI_API_KEY and SYNCRA_AI_MODEL.
+    facts = {k:event.get(k) for k in ("title","club","date","time","end_date","end_time","venue","description","tracks","prize_pool","fee","registration_url","discord_url","whatsapp_url","guest_speakers") if event.get(k) is not None}
+    base_url=os.getenv("SYNCRA_AI_BASE_URL","").rstrip("/")
+    api_key=os.getenv("SYNCRA_AI_API_KEY","")
+    model=os.getenv("SYNCRA_AI_MODEL","")
+    if base_url and api_key and model:
+        import urllib.request
+        body=json.dumps({"model":model,"messages":[{"role":"system","content":"Answer only from the supplied event JSON. If a fact is absent, say it is not provided. Never invent links, prices, eligibility or dates."},{"role":"user","content":json.dumps({"question":question,"event":facts})}],"temperature":0.1}).encode()
+        req=urllib.request.Request(base_url+"/chat/completions",data=body,headers={"Authorization":"Bearer "+api_key,"Content-Type":"application/json"})
+        try:
+            with urllib.request.urlopen(req,timeout=20) as response: result=json.loads(response.read().decode())
+            answer=result["choices"][0]["message"]["content"]
+            return {"answer":answer,"source":"configured_ai","event_id":event_id}
+        except Exception:
+            pass
+    return {"answer":"Here are the confirmed details I can find: "+json.dumps(facts,ensure_ascii=False)+". I don't have an AI provider configured yet, so this is a grounded event-data response rather than an AI-generated answer.","source":"event_data_fallback","ai_configured":False,"event_id":event_id}
+
 @app.get("/api/v1/public/events")
 async def public_events():
     return list(EVENTS.values())
@@ -258,17 +347,6 @@ async def create_event(payload: EventCreate, user: dict = Depends(require_role("
     EVENTS[event_id] = event
     return event
 
-@app.post("/api/v1/events/{event_id}/register")
-async def register_event(event_id: str, user: dict = Depends(require_role("student", "president", "faculty"))):
-    event = EVENTS.get(event_id)
-    if not event: raise HTTPException(status_code=404, detail="Event not found")
-    registrations = REGISTRATIONS.setdefault(user["id"], set())
-    if event_id in registrations:
-        return {"message": "You are already registered for this event", "event": event}
-    if event["registered"] >= event["capacity"]: raise HTTPException(status_code=409, detail="This event is full")
-    registrations.add(event_id)
-    event["registered"] += 1
-    return {"message": "Registration successful", "event": event}
 
 @app.get("/api/v1/my/events")
 async def my_events(user: dict = Depends(current_user)):
