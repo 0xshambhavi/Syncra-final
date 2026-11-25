@@ -34,10 +34,10 @@ USERS: dict[str, dict] = {}
 TOKENS: dict[str, str] = {}
 PASSWORDS: dict[str, str] = {}
 EVENTS: dict[str, dict] = {
-    "node-hackathon-2026": {"id":"node-hackathon-2026","title":"NODE 24-Hour Hackathon","club":"Node","event_type":"Hackathon","date":"2026-12-04","time":"10:30","end_date":"2026-12-05","end_time":"10:30","venue":"APJ Abdul Kalam Lab and CV Raman Lab, BMSIT&M","description":"A 24-hour build sprint by NODE (Network of Decentralised Engineers). Explore software tracks, collaborate with builders and compete for the prize pool.","tracks":["Web3 and decentralised applications","AI and machine learning","Open innovation / software engineering"],"prize_pool":15000,"discord_url":"https://discord.gg/node-bmsit","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_NODE_INVITE","club_url":"https://nodebmsit.live/","capacity":200,"registered":0,"fee":0,"status":"approved","demo_links":True},
-    "alterino-debug-2026": {"id":"alterino-debug-2026","title":"Debugging Challenge","club":"Alterino","event_type":"Competition","date":"2026-12-25","time":"09:00","end_date":"2026-12-25","end_time":"15:00","venue":"BSN Auditorium, BMSIT&M","description":"A debugging challenge to test problem-solving and code-reading skills.","prize_pool":5000,"capacity":150,"registered":0,"fee":0,"status":"approved"},
-    "tedx-bmsitm-2026": {"id":"tedx-bmsitm-2026","title":"TEDxBMSIT&M","club":"TEDxBMSIT&M","event_type":"Talks and conference","date":"2026-12-27","time":"10:30","end_date":"2026-12-27","end_time":"16:00","venue":"BSN Auditorium, CV Raman Block, BMSIT&M","description":"A day of ideas and conversations. Demo speaker profiles and registration QR are shown for preview only.","fee":200,"registration_url":"https://example.com/demo-tedx-registration","registration_qr_url":"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fexample.com%2Fdemo-tedx-registration","guest_speakers":[{"name":"Aarav Mehta","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Mira Rao","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Kabir Shah","role":"Demo speaker","affiliation":"Sample profile — not confirmed"}],"club_url":"https://www.tedxbmsitm.in/","capacity":300,"registered":0,"status":"approved","demo_content":True},
-    "codered-2026": {"id":"codered-2026","title":"Code Red '26 — 24-Hour National Hackathon","club":"E-Cell","event_type":"Hackathon","date":"2026-12-27","time":"10:30","end_date":"2026-12-28","end_time":"10:30","venue":"BICEP, BMSIT&M","description":"A 24-hour national hackathon organised by E-Cell.","registration_url":"https://unstop.com/hackathons/codered26-bms-insitute-of-technology-and-management-1810268","discord_url":"https://discord.gg/codered-bmsit-demo","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_CODERED_INVITE","capacity":500,"registered":0,"fee":0,"status":"approved","demo_links":True},
+    "node-hackathon-2026": {"id":"node-hackathon-2026","title":"NODE 24-Hour Hackathon","club":"Node","owner_club":"Node","event_type":"Hackathon","date":"2026-12-04","time":"10:30","end_date":"2026-12-05","end_time":"10:30","venue":"APJ Abdul Kalam Lab and CV Raman Lab, BMSIT&M","description":"A 24-hour build sprint by NODE (Network of Decentralised Engineers). Explore software tracks, collaborate with builders and compete for the prize pool.","tracks":["Web3 and decentralised applications","AI and machine learning","Open innovation / software engineering"],"prize_pool":15000,"discord_url":"https://discord.gg/node-bmsit","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_NODE_INVITE","club_url":"https://nodebmsit.live/","capacity":200,"registered":0,"fee":0,"status":"approved","demo_links":True},
+    "alterino-debug-2026": {"id":"alterino-debug-2026","title":"Debugging Challenge","club":"Alterino","owner_club":"Alterino","event_type":"Competition","date":"2026-12-25","time":"09:00","end_date":"2026-12-25","end_time":"15:00","venue":"BSN Auditorium, BMSIT&M","description":"A debugging challenge to test problem-solving and code-reading skills.","prize_pool":5000,"capacity":150,"registered":0,"fee":0,"status":"approved"},
+    "tedx-bmsitm-2026": {"id":"tedx-bmsitm-2026","title":"TEDxBMSIT&M","club":"TEDxBMSIT&M","owner_club":"TEDxBMSIT&M","event_type":"Talks and conference","date":"2026-12-27","time":"10:30","end_date":"2026-12-27","end_time":"16:00","venue":"BSN Auditorium, CV Raman Block, BMSIT&M","description":"A day of ideas and conversations. Demo speaker profiles and registration QR are shown for preview only.","fee":200,"registration_url":"https://example.com/demo-tedx-registration","registration_qr_url":"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fexample.com%2Fdemo-tedx-registration","guest_speakers":[{"name":"Aarav Mehta","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Mira Rao","role":"Demo speaker","affiliation":"Sample profile — not confirmed"},{"name":"Kabir Shah","role":"Demo speaker","affiliation":"Sample profile — not confirmed"}],"club_url":"https://www.tedxbmsitm.in/","capacity":300,"registered":0,"status":"approved","demo_content":True},
+    "codered-2026": {"id":"codered-2026","title":"Code Red '26 — 24-Hour National Hackathon","club":"E-Cell","owner_club":"E-Cell","event_type":"Hackathon","date":"2026-12-27","time":"10:30","end_date":"2026-12-28","end_time":"10:30","venue":"BICEP, BMSIT&M","description":"A 24-hour national hackathon organised by E-Cell.","registration_url":"https://unstop.com/hackathons/codered26-bms-insitute-of-technology-and-management-1810268","discord_url":"https://discord.gg/codered-bmsit-demo","whatsapp_url":"https://chat.whatsapp.com/REPLACE_WITH_REAL_CODERED_INVITE","capacity":500,"registered":0,"fee":0,"status":"approved","demo_links":True},
 }
 CLUBS = [
  {"name":"TEDxBMSIT&M","category":"Ideas and community","tagline":"Ideas worth spreading.","website":"https://www.tedxbmsitm.in/"},
@@ -47,7 +47,12 @@ CLUBS = [
  {"name":"E-Cell","category":"Entrepreneurship","tagline":"Build ideas into ventures.","website":""},
  {"name":"Alterino","category":"Technology","tagline":"Debug, build and compete.","website":""},
 ]
-BUDGETS: dict[str, dict] = {}
+BUDGETS: dict[str, dict] = {
+ "node-hackathon-2026":{"event_id":"node-hackathon-2026","total_amount":185000,"currency":"INR","items":[{"category":"venue","amount":25000},{"category":"food","amount":45000},{"category":"prizes","amount":75000},{"category":"marketing","amount":12000},{"category":"equipment","amount":18000},{"category":"honorarium","amount":8000},{"category":"misc","amount":2000}],"remarks":"Synthetic demo estimate — not an approved institutional allocation.","status":"pending","recommendations":[{"action":"review","reason":"Synthetic planning figures; obtain vendor quotes before approval."}],"submitted_by":"demo"},
+ "alterino-debug-2026":{"event_id":"alterino-debug-2026","total_amount":42000,"currency":"INR","items":[{"category":"venue","amount":8000},{"category":"food","amount":9000},{"category":"prizes","amount":15000},{"category":"marketing","amount":4000},{"category":"equipment","amount":4000},{"category":"misc","amount":2000}],"remarks":"Synthetic demo estimate.","status":"pending","recommendations":[{"action":"review","reason":"Synthetic planning figures; validate actual costs."}],"submitted_by":"demo"},
+ "tedx-bmsitm-2026":{"event_id":"tedx-bmsitm-2026","total_amount":265000,"currency":"INR","items":[{"category":"venue","amount":45000},{"category":"food","amount":65000},{"category":"prizes","amount":0},{"category":"marketing","amount":35000},{"category":"equipment","amount":25000},{"category":"honorarium","amount":80000},{"category":"misc","amount":15000}],"remarks":"Synthetic demo estimate.","status":"pending","recommendations":[{"action":"review","reason":"Synthetic planning figures; confirm speaker and production costs."}],"submitted_by":"demo"},
+ "codered-2026":{"event_id":"codered-2026","total_amount":310000,"currency":"INR","items":[{"category":"venue","amount":35000},{"category":"food","amount":85000},{"category":"prizes","amount":150000},{"category":"marketing","amount":18000},{"category":"equipment","amount":12000},{"category":"misc","amount":10000}],"remarks":"Synthetic demo estimate.","status":"pending","recommendations":[{"action":"review","reason":"Synthetic planning figures; validate sponsor commitments and vendor quotes."}],"submitted_by":"demo"}
+}
 NOTIFICATIONS: dict[str, list[dict]] = {}
 REGISTRATIONS: dict[str, set[str]] = {}
 VENUES: dict[str, dict] = {
@@ -377,6 +382,9 @@ async def my_events(user: dict = Depends(current_user)):
     if user["role"] == "student":
         registered_ids = REGISTRATIONS.get(user["id"], set())
         return [EVENTS[event_id] for event_id in registered_ids if event_id in EVENTS]
+    if user["role"] == "president":
+        club = user["profile"].get("club_name")
+        return [e for e in EVENTS.values() if e.get("owner_club") == club]
     return [e for e in EVENTS.values() if e.get("created_by") == user["id"]]
 
 @app.post("/api/v1/budget/request", status_code=201)
@@ -385,7 +393,7 @@ async def submit_budget(request: BudgetRequest, user: dict = Depends(require_rol
     ceilings = {"venue": 200000, "food": 100000, "prizes": 150000, "marketing": 50000, "equipment": 70000, "honorarium": 60000, "misc": 30000}
     if abs(sum(i.amount for i in request.items) - request.total_amount) > 1: raise HTTPException(status_code=422, detail="Budget total must equal the sum of its line items")
     recommendations = [{"action": "reduce", "reason": f"{i.category.title()} exceeds the suggested ₹{ceilings[i.category]:,.0f} limit"} for i in request.items if i.amount > ceilings[i.category]]
-    if request.total_amount > 5000: recommendations.append({"action": "revision", "reason": "Total budget exceeds the suggested $5,000 limit"})
+    if request.total_amount > 500000: recommendations.append({"action": "revision", "reason": "Total budget exceeds the suggested ₹5,00,000 demo limit"})
     if not recommendations: recommendations = [{"action": "approve", "reason": "Budget is within the suggested limits"}]
     result = {**request.model_dump(), "status": "pending", "recommendations": recommendations, "submitted_by": user["id"]}
     event = EVENTS[request.event_id]
@@ -415,6 +423,14 @@ async def budget_decision(event_id: str, decision: Literal["approve", "reduce", 
     if not result: raise HTTPException(status_code=404, detail="Budget not found")
     result["status"] = decision
     return {"message": f"Budget {decision}", "budget": result}
+
+@app.post("/api/v1/admin/events/{event_id}/decision")
+async def event_decision(event_id: str, decision: Literal["approve", "reject"], user: dict = Depends(require_role("faculty", "principal"))):
+    event = EVENTS.get(event_id)
+    if not event: raise HTTPException(status_code=404, detail="Event not found")
+    event["status"] = decision
+    event["reviewed_by"] = user["id"]
+    return event
 
 @app.get("/api/v1/notifications")
 async def notifications(user: dict = Depends(current_user)):
