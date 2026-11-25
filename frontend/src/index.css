@@ -8,6 +8,7 @@
 .sidebar-nav{display:flex;flex-direction:column;gap:4px}
 .side-link{transition:background .18s ease,color .18s ease}
 .side-link:hover{background:#e6ddd0;color:var(--ink)}
+.side-link:first-of-type:not(.active){background:transparent;color:#6d6871}
 .side-link.active{background:var(--ink);color:#fff}
 @media(max-width:620px){
   .sidebar{height:auto;min-height:0;flex-wrap:wrap;justify-content:flex-start;gap:8px;padding:10px 12px}
