@@ -160,6 +160,10 @@ class EventCreate(BaseModel):
     venue: str
     description: str=""
     capacity: int=Field(default=100,gt=0)
+    end_date: str | None = None
+    end_time: str | None = None
+    fee: float = Field(default=0, ge=0)
+    prize_pool: float = Field(default=0, ge=0)
 class BudgetItem(BaseModel):
     category: Literal["venue","food","prizes","marketing","equipment","honorarium","misc"]
     amount: float=Field(gt=0)
@@ -389,6 +393,11 @@ async def submit_budget(request: BudgetRequest, user: dict = Depends(require_rol
     result["currency"] = "INR"
     BUDGETS[request.event_id] = result
     return result
+
+@app.get("/api/v1/my/budgets")
+async def my_budgets(user: dict = Depends(require_role("president"))):
+    club = user["profile"].get("club_name")
+    return [b for b in BUDGETS.values() if EVENTS.get(b["event_id"], {}).get("owner_club") == club]
 
 @app.get("/api/v1/budget/requests")
 async def list_budgets(user: dict = Depends(require_role("faculty", "principal"))):
