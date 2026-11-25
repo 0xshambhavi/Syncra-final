@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Award, Bell, CalendarDays, CalendarPlus, Check,
   ChevronDown, ChevronLeft, ChevronRight, Clock3, Compass, ExternalLink,
-  Filter, MapPin, Search, Settings, Ticket, Users, X, UserRound, Sparkles,
+  Filter, MapPin, Search, Settings, Ticket, Users, X, User, Sparkles,
   Bookmark, BookmarkCheck, CalendarCheck, CircleHelp, LogOut
 } from 'lucide-react';
 import { api } from './utils/api';
