@@ -380,6 +380,9 @@ async def create_event(payload: EventCreate, user: dict = Depends(require_role("
     if payload.venue not in {v["name"] for v in VENUES.values()}: raise HTTPException(status_code=422, detail="Choose one of the five configured campus venues")
     event_id = str(uuid4())
     event = {"id": event_id, **payload.model_dump(), "registered": 0, "status": "pending", "created_by": user["id"], "owner_club": user["profile"].get("club_name") if user["role"]=="president" else payload.club}
+    from urllib.parse import quote
+    event["registration_url"] = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/app?event={event_id}"
+    event["registration_qr_url"] = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + quote(event["registration_url"], safe="")
     EVENTS[event_id] = event
     return event
 
