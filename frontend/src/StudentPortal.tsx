@@ -92,8 +92,15 @@ export default function StudentPortal({user}:{user:any}) {
   const notify=(s:string)=>{setToast(s);window.setTimeout(()=>setToast(''),3200)};
   async function register(e:CampusEvent){
     setBusyId(e.id);
-    try{await api(`/api/v1/events/${e.id}/register`,{method:'POST'});setRegistered(prev=>prev.includes(e.id)?prev:[...prev,e.id]);setEvents(prev=>prev.map(x=>x.id===e.id?{...x,registered:x.registered+1}:x));setSelectedEvent({...e,registered:e.registered+1});notify('You’re on the list! Your event pass is ready in My Events.')}
-    catch(err:any){notify(err.message||'Could not register for this event')}
+    try{
+      const result=await api<any>(`/api/v1/events/${e.id}/register`,{method:'POST'});
+      setRegistered(prev=>prev.includes(e.id)?prev:[...prev,e.id]);
+      setEvents(prev=>prev.map(x=>x.id===e.id?{...x,registered:result.event?.registered??x.registered+1}:x));
+      setSelectedEvent({...e,registered:result.event?.registered??e.registered+1});
+      if(result.conflicts?.length) notify("Registered, but schedule conflict: "+result.conflicts.map((c:any)=>c.title).join(", "));
+      else notify('You’re on the list! Your event pass is ready in My Events.');
+      void refresh();
+    }catch(err:any){notify(err.message||'Could not register for this event')}
     finally{setBusyId('')}
   }
   async function markRead(n:Notice){try{await api(`/api/v1/notifications/${n.id}/read`,{method:'POST'});setNotices(prev=>prev.map(x=>x.id===n.id?{...x,read:true}:x))}catch(e:any){notify(e.message)}}
