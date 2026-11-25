@@ -1,13 +1,40 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Clock3, Compass, LogOut, Plus, Users, Bell, LayoutDashboard, ArrowRight, MapPin, Sparkles } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, Compass, LogOut, Plus, Users, Bell, LayoutDashboard, ArrowRight, MapPin, Sparkles, Award, UserRound, Settings } from 'lucide-react';
 import { api, setSession } from './utils/api';
+import StudentPortal from './StudentPortal';
 import { useAuth } from './utils/useAuth';
 
 type EventItem = { id: string; title: string; club: string; date: string; time: string; venue: string; description: string; capacity: number; registered: number; status: string };
 
 function Shell({ children, user, onLogout }: any) {
-  return <div className="app-shell"><aside className="sidebar"><Link to="/app" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link><div className="side-label">WORKSPACE</div><nav className="sidebar-nav" aria-label="Student dashboard navigation"><NavLink to="/app" end className={({isActive}) => `side-link ${isActive ? 'active' : ''}`}><LayoutDashboard size={18}/> Overview</NavLink><NavLink to="/app/events" className={({isActive}) => `side-link ${isActive ? 'active' : ''}`}><CalendarDays size={18}/> Explore events</NavLink><NavLink to="/app/notifications" className={({isActive}) => `side-link ${isActive ? 'active' : ''}`}><Bell size={18}/> Notifications</NavLink></nav><div className="sidebar-bottom"><div className="user-chip"><span className="avatar">{user?.email?.[0]?.toUpperCase() || 'S'}</span><span><b>{user?.email?.split('@')[0]}</b><small>{user?.role}</small></span></div><button className="logout" onClick={onLogout}><LogOut size={17}/> Sign out</button></div></aside><main className="main-area">{children}</main></div>;
+  const student = user?.role === 'student';
+  const studentLinks = [
+    {to:'/app',label:'Home',icon:<LayoutDashboard size={18}/>,end:true},
+    {to:'/app/my-events',label:'My Events',icon:<CalendarDays size={18}/>},
+    {to:'/app/certificates',label:'My Certificates',icon:<Award size={18}/>},
+    {to:'/app/clubs',label:'Explore Clubs',icon:<Users size={18}/>},
+    {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>},
+    {to:'/app/profile',label:'Profile',icon:<UserRound size={18}/>},
+    {to:'/app/settings',label:'Settings',icon:<Settings size={18}/>}
+  ];
+  const staffLinks = [
+    {to:'/app',label:'Overview',icon:<LayoutDashboard size={18}/>,end:true},
+    {to:'/app/events',label:'Explore events',icon:<CalendarDays size={18}/>},
+    {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>}
+  ];
+  const links=student?studentLinks:staffLinks;
+  return <div className={student?'app-shell student-shell':'app-shell'}>
+    <aside className="sidebar">
+      <Link to="/app" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link>
+      <div className="side-label">{student?'YOUR CAMPUS':'WORKSPACE'}</div>
+      <nav className="sidebar-nav" aria-label="Dashboard navigation">
+        {links.map(item=><NavLink key={item.to} to={item.to} end={item.end} className={({isActive})=>`side-link ${isActive?'active':''}`}>{item.icon}{item.label}{item.label==='Notifications'&&student&&<span className="nav-unread">•</span>}</NavLink>)}
+      </nav>
+      <div className="sidebar-bottom"><div className="user-chip"><span className="avatar">{user?.email?.[0]?.toUpperCase()||'S'}</span><span><b>{user?.profile?.full_name||user?.email?.split('@')[0]}</b><small>{user?.role}</small></span></div><button className="logout" onClick={onLogout}><LogOut size={17}/> Sign out</button></div>
+    </aside>
+    <main className="main-area">{children}</main>
+  </div>;
 }
 
 function Landing() {
@@ -87,4 +114,4 @@ function Dashboard({ user }: {user:any}) {
     <div className="dashboard-columns"><section className="panel"><div className="panel-heading"><div><div className="eyebrow">DON'T MISS OUT</div><h2>Campus events</h2></div><span className="live-pill">● LIVE</span></div><div className="dashboard-events">{events.map((e,i)=><article className="dashboard-event" key={e.id}><div className={`date-tile date-${i%3}`}><b>{new Date(`${e.date}T00:00:00`).getDate()}</b><small>{new Date(`${e.date}T00:00:00`).toLocaleString('en',{month:'short'}).toUpperCase()}</small></div><div className="dashboard-event-info"><span>{e.club} · {e.status}</span><h3>{e.title}</h3><small><Clock3 size={13}/> {e.time} &nbsp; <MapPin size={13}/> {e.venue}</small><div className="mini-track"><i style={{width:`${Math.min(100,e.registered/e.capacity*100)}%`}}/></div></div><button className="btn btn-outline" onClick={()=>register(e.id)}>Join</button></article>)}</div></section><aside className="panel updates-panel"><div className="eyebrow">YOUR INBOX</div><h2>Little updates.</h2>{notifications.length?notifications.map(n=><div className="notification" key={n.id}><span className="notification-icon"><Bell size={16}/></span><div><b>{n.title}</b><p>{n.message}</p>{!n.read&&<button onClick={()=>markRead(n.id)}>Mark as read</button>}</div></div>):<p className="muted">You're all caught up. Enjoy the quiet.</p>}<div className="tip-card"><Sparkles size={18}/><b>Good things start by showing up.</b><span>Explore something new this week.</span></div></aside></div></>;
 }
 
-export default function App(){const {user,loading,setUser,signOut}=useAuth();if(loading)return <div className="loading">Syncing your campus…</div>;return <Routes><Route path="/" element={user?<Navigate to="/app" replace/>:<Landing/>}/><Route path="/auth" element={user?<Navigate to="/app" replace/>:<AuthPage onAuthenticated={setUser}/>}/><Route path="/app/*" element={user?<Shell user={user} onLogout={()=>{signOut();location.href='/'}}><Dashboard user={user}/></Shell>:<Navigate to="/auth" replace/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
+export default function App(){const {user,loading,setUser,signOut}=useAuth();if(loading)return <div className="loading">Syncing your campus…</div>;return <Routes><Route path="/" element={user?<Navigate to="/app" replace/>:<Landing/>}/><Route path="/auth" element={user?<Navigate to="/app" replace/>:<AuthPage onAuthenticated={setUser}/>}/><Route path="/app/*" element={user?<Shell user={user} onLogout={()=>{signOut();location.href='/'}}>{user.role==='student'?<StudentPortal user={user}/>:<Dashboard user={user}/>}</Shell>:<Navigate to="/auth" replace/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
