@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, Clock3, Compass, LogOut, Plus, Users, Bell, LayoutDashboard, ArrowRight, MapPin, Sparkles, Award, UserRound, Settings } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, Compass, LogOut, Plus, Users, Bell, LayoutDashboard, ArrowRight, MapPin, Sparkles, Award, User, Settings } from 'lucide-react';
 import { api, setSession } from './utils/api';
 import StudentPortal from './StudentPortal';
 import { useAuth } from './utils/useAuth';
@@ -15,7 +15,7 @@ function Shell({ children, user, onLogout }: any) {
     {to:'/app/certificates',label:'My Certificates',icon:<Award size={18}/>},
     {to:'/app/clubs',label:'Explore Clubs',icon:<Users size={18}/>},
     {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>},
-    {to:'/app/profile',label:'Profile',icon:<UserRound size={18}/>},
+    {to:'/app/profile',label:'Profile',icon:<User size={18}/>},
     {to:'/app/settings',label:'Settings',icon:<Settings size={18}/>}
   ];
   const staffLinks = [
