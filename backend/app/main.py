@@ -257,7 +257,7 @@ async def logout(authorization: str|None=Header(default=None)):
 class ProfileUpdate(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
     student_id: str = Field(min_length=5, max_length=32)
-    profile_picture_url: str | None = Field(default=None, max_length=2000)
+    profile_picture_url: str | None = Field(default=None, max_length=2500000)
 
 def event_datetime(event: dict, end: bool = False):
     day = event.get("end_date") if end else event.get("date")
