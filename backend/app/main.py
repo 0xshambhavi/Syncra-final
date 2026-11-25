@@ -36,6 +36,7 @@ EVENTS: dict[str, dict] = {
 }
 BUDGETS: dict[str, dict] = {}
 NOTIFICATIONS: dict[str, list[dict]] = {}
+REGISTRATIONS: dict[str, set[str]] = {}
 VENUES: dict[str, dict] = {
     "auditorium-a":{"id":"auditorium-a","name":"Auditorium A","type":"auditorium","capacity":250,"building":"Main Block","floor":"Ground","bookable":True},
     "innovation-lab":{"id":"innovation-lab","name":"Innovation Lab","type":"lab","capacity":100,"building":"Technology Block","floor":"2","bookable":True},
@@ -261,12 +262,19 @@ async def create_event(payload: EventCreate, user: dict = Depends(require_role("
 async def register_event(event_id: str, user: dict = Depends(require_role("student", "president", "faculty"))):
     event = EVENTS.get(event_id)
     if not event: raise HTTPException(status_code=404, detail="Event not found")
+    registrations = REGISTRATIONS.setdefault(user["id"], set())
+    if event_id in registrations:
+        return {"message": "You are already registered for this event", "event": event}
     if event["registered"] >= event["capacity"]: raise HTTPException(status_code=409, detail="This event is full")
+    registrations.add(event_id)
     event["registered"] += 1
     return {"message": "Registration successful", "event": event}
 
 @app.get("/api/v1/my/events")
 async def my_events(user: dict = Depends(current_user)):
+    if user["role"] == "student":
+        registered_ids = REGISTRATIONS.get(user["id"], set())
+        return [EVENTS[event_id] for event_id in registered_ids if event_id in EVENTS]
     return [e for e in EVENTS.values() if e.get("created_by") == user["id"]]
 
 @app.post("/api/v1/budget/request", status_code=201)
