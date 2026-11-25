@@ -20,11 +20,54 @@ function Landing() {
     <footer className="footer"><Link to="/" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link><span>Good things happen when we sync. © 2026 Syncra</span></footer></div>;
 }
 
-function AuthPage() {
-  const nav = useNavigate(); const [mode,setMode] = useState<'login'|'signup'>(new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup':'login');
-  const [email,setEmail]=useState('student@example.edu'); const [password,setPassword]=useState('syncra123'); const [role,setRole]=useState('student'); const [error,setError]=useState(''); const [busy,setBusy]=useState(false);
-  async function submit(e:FormEvent) { e.preventDefault(); setBusy(true); setError(''); try { const result = await api<any>(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({email,password,role})}); setSession(result.access_token,result.user); nav('/app'); } catch(err:any) { setError(err.message); } finally { setBusy(false); } }
-  return <div className="auth-page"><Link to="/" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link><div className="auth-card"><div className="eyebrow">YOUR CAMPUS, ONE PLACE</div><h1>{mode==='login'?'Welcome back.':'Find your people.'}</h1><p>{mode==='login'?'Pick up where your campus left off.':'Create an account and get in sync.'}</p><div className="auth-tabs"><button className={mode==='login'?'active':''} onClick={()=>setMode('login')}>Log in</button><button className={mode==='signup'?'active':''} onClick={()=>setMode('signup')}>Sign up</button></div><form onSubmit={submit}><label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="you@college.edu"/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6}/></label>{mode==='signup'&&<label>I am a…<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">Student</option><option value="president">Club president</option><option value="faculty">Faculty</option></select></label>}{error&&<div className="error-msg">{error}</div>}<button className="btn btn-dark full" disabled={busy}>{busy?'Please wait…':mode==='login'?'Log in to Syncra':'Create account'} <ArrowRight size={16}/></button></form><div className="demo-hint"><b>Local demo access</b><span>student@example.edu · syncra123</span><span>president@example.edu · syncra123</span><span>faculty@example.edu · syncra123</span></div></div><span className="auth-foot">A little more together. A lot less complicated.</span></div>;
+function AuthPage({ onAuthenticated }: { onAuthenticated: (user:any)=>void }) {
+  const nav=useNavigate();
+  const [mode,setMode]=useState<'login'|'signup'>(new URLSearchParams(location.search).get('mode')==='signup'?'signup':'login');
+  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [role,setRole]=useState('student');
+  const [fullName,setFullName]=useState(''); const [studentId,setStudentId]=useState(''); const [department,setDepartment]=useState('');
+  const [clubName,setClubName]=useState(''); const [position,setPosition]=useState('');
+  const [verificationCode,setVerificationCode]=useState(''); const [pendingVerification,setPendingVerification]=useState(false);
+  const [devCode,setDevCode]=useState(''); const [message,setMessage]=useState(''); const [error,setError]=useState(''); const [busy,setBusy]=useState(false);
+  async function submit(e:FormEvent) {
+    e.preventDefault(); setBusy(true); setError(''); setMessage('');
+    try {
+      if(mode==='signup') {
+        const result=await api<any>('/api/v1/auth/signup',{method:'POST',body:JSON.stringify({email,password,role,full_name:fullName,student_id:studentId||null,department:department||null,club_name:clubName||null,position:position||null})});
+        if(role==='student') { setPendingVerification(true); setDevCode(result.development_verification_code||''); setMessage('Account created. Verify your institutional email to activate your student account.'); }
+        else { setMessage('Your request has been sent. You can log in after the Principal approves it.'); setMode('login'); }
+      } else {
+        const result=await api<any>('/api/v1/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+        if(!result?.access_token||!result?.user) throw new Error('The server returned an incomplete login response.');
+        setSession(result.access_token,result.user); onAuthenticated(result.user); nav('/app',{replace:true});
+      }
+    } catch(err:any) { setError(err.message); } finally { setBusy(false); }
+  }
+  async function verify(e:FormEvent) {
+    e.preventDefault(); setBusy(true); setError('');
+    try { const result=await api<any>('/api/v1/auth/verify-email',{method:'POST',body:JSON.stringify({email,code:verificationCode})}); setSession(result.access_token,result.user); onAuthenticated(result.user); nav('/app',{replace:true}); }
+    catch(err:any) { setError(err.message); } finally { setBusy(false); }
+  }
+  return <div className="auth-page"><Link to="/" className="brand"><span className="brand-mark">S</span><span>syncra<small>CAMPUS, CONNECTED</small></span></Link><div className="auth-card">
+    <div className="eyebrow">YOUR CAMPUS, ONE PLACE</div><h1>{pendingVerification?'Verify your email':mode==='login'?'Welcome back.':'Find your people.'}</h1>
+    <p>{pendingVerification?'Enter the six-digit verification code.':mode==='login'?'Pick up where your campus left off.':'Create your campus profile.'}</p>
+    {message&&<div className="notice">{message}</div>}{error&&<div className="error-msg">{error}</div>}
+    {pendingVerification?<form onSubmit={verify}><label>Verification code<input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={e=>setVerificationCode(e.target.value)} required placeholder="6-digit code"/></label>{devCode&&<div className="demo-hint"><b>Development verification code</b><span>{devCode}</span></div>}<button className="btn btn-dark full" disabled={busy}>{busy?'Verifying…':'Verify email and continue'}</button></form>:<>
+      <div className="auth-tabs"><button type="button" className={mode==='login'?'active':''} onClick={()=>{setMode('login');setError('');setMessage('')}}>Log in</button><button type="button" className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setError('');setMessage('')}}>Sign up</button></div>
+      <form onSubmit={submit}>
+        {mode==='signup'&&<label>Full name<input value={fullName} onChange={e=>setFullName(e.target.value)} minLength={2} required placeholder="Your full name"/></label>}
+        <label>Institutional email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="you@college.edu" autoComplete="email"/></label>
+        <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={8} autoComplete={mode==='login'?'current-password':'new-password'} placeholder="At least 8 characters"/></label>
+        {mode==='signup'&&<>
+          <label>I am a…<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">Normal Student</option><option value="president">Club President</option><option value="faculty">Faculty Coordinator</option></select></label>
+          {role==='student'&&<label>Student ID (optional)<input value={studentId} onChange={e=>setStudentId(e.target.value)}/></label>}
+          {role==='president'&&<><label>Club name<input value={clubName} onChange={e=>setClubName(e.target.value)} required/></label><label>Position<input value={position} onChange={e=>setPosition(e.target.value)} required placeholder="e.g. President"/></label></>}
+          {role==='faculty'&&<label>Department<input value={department} onChange={e=>setDepartment(e.target.value)} required/></label>}
+          <p className="muted">{role==='student'?'Student accounts activate after email verification.':'This profile remains pending until approved by the Principal.'} Principal accounts are provisioned privately by the institution.</p>
+        </>}
+        <button className="btn btn-dark full" disabled={busy}>{busy?'Please wait…':mode==='login'?'Log in to Syncra':'Create account'} <ArrowRight size={16}/></button>
+      </form></>}
+    <div className="demo-hint"><b>Local demo accounts</b><span>student@example.edu · syncra123</span><span>president@example.edu · syncra123</span><span>faculty@example.edu · syncra123</span></div>
+  </div><span className="auth-foot">A little more together. A lot less complicated.</span></div>;
 }
 
 function Dashboard({ user }: {user:any}) {
@@ -39,4 +82,4 @@ function Dashboard({ user }: {user:any}) {
     <div className="dashboard-columns"><section className="panel"><div className="panel-heading"><div><div className="eyebrow">DON'T MISS OUT</div><h2>Campus events</h2></div><span className="live-pill">● LIVE</span></div><div className="dashboard-events">{events.map((e,i)=><article className="dashboard-event" key={e.id}><div className={`date-tile date-${i%3}`}><b>{new Date(`${e.date}T00:00:00`).getDate()}</b><small>{new Date(`${e.date}T00:00:00`).toLocaleString('en',{month:'short'}).toUpperCase()}</small></div><div className="dashboard-event-info"><span>{e.club} · {e.status}</span><h3>{e.title}</h3><small><Clock3 size={13}/> {e.time} &nbsp; <MapPin size={13}/> {e.venue}</small><div className="mini-track"><i style={{width:`${Math.min(100,e.registered/e.capacity*100)}%`}}/></div></div><button className="btn btn-outline" onClick={()=>register(e.id)}>Join</button></article>)}</div></section><aside className="panel updates-panel"><div className="eyebrow">YOUR INBOX</div><h2>Little updates.</h2>{notifications.length?notifications.map(n=><div className="notification" key={n.id}><span className="notification-icon"><Bell size={16}/></span><div><b>{n.title}</b><p>{n.message}</p>{!n.read&&<button onClick={()=>markRead(n.id)}>Mark as read</button>}</div></div>):<p className="muted">You're all caught up. Enjoy the quiet.</p>}<div className="tip-card"><Sparkles size={18}/><b>Good things start by showing up.</b><span>Explore something new this week.</span></div></aside></div></>;
 }
 
-export default function App(){const {user,loading,signOut}=useAuth();if(loading)return <div className="loading">Syncing your campus…</div>;return <Routes><Route path="/" element={user?<Navigate to="/app" replace/>:<Landing/>}/><Route path="/auth" element={user?<Navigate to="/app" replace/>:<AuthPage/>}/><Route path="/app/*" element={user?<Shell user={user} onLogout={()=>{signOut();location.href='/'}}><Dashboard user={user}/></Shell>:<Navigate to="/auth" replace/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
+export default function App(){const {user,loading,setUser,signOut}=useAuth();if(loading)return <div className="loading">Syncing your campus…</div>;return <Routes><Route path="/" element={user?<Navigate to="/app" replace/>:<Landing/>}/><Route path="/auth" element={user?<Navigate to="/app" replace/>:<AuthPage onAuthenticated={setUser}/>}/><Route path="/app/*" element={user?<Shell user={user} onLogout={()=>{signOut();location.href='/'}}><Dashboard user={user}/></Shell>:<Navigate to="/auth" replace/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
