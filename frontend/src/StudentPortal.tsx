@@ -61,6 +61,7 @@ export default function StudentPortal({user}:{user:any}) {
   const refresh=async()=>{
     setLoading(true);setError('');
     try{const data=await api<CampusEvent[]>('/api/v1/events');setEvents(Array.isArray(data)?data:[])}catch(e:any){setError(e.message||'Could not load campus events')}
+    try{const mine=await api<CampusEvent[]>('/api/v1/my/events');const ids=Array.isArray(mine)?mine.map(e=>e.id):[];setRegistered(ids)}catch{}
     try{const data=await api<Notice[]>('/api/v1/notifications');setNotices(Array.isArray(data)?data:[])}catch{}
     setLoading(false);
   };
