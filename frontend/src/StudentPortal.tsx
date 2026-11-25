@@ -23,7 +23,6 @@ const CLUBS = [
   {name:'TEDxBMSIT&M',tagline:'Ideas worth spreading.',members:0,accent:'coral',initials:'TX',category:'Ideas & community',website:'https://www.tedxbmsitm.in/'},
   {name:'Node',tagline:'Network of Decentralised Engineers.',members:0,accent:'mint',initials:'N',category:'Technology',website:'https://nodebmsit.live/'},
   {name:'Web3',tagline:'Explore decentralised technology.',members:0,accent:'blue',initials:'W3',category:'Technology',website:''},
-  {name:'Access Denied',tagline:'Learn, explore and secure.',members:0,accent:'lavender',initials:'AD',category:'Cybersecurity',website:''},
   {name:'AR/VR Club',tagline:'Build immersive experiences.',members:0,accent:'pink',initials:'AV',category:'Extended reality',website:''},
   {name:'E-Cell',tagline:'Build ideas into ventures.',members:0,accent:'yellow',initials:'EC',category:'Entrepreneurship',website:''},
   {name:'Alterino',tagline:'Debug, build and compete.',members:0,accent:'coral',initials:'AL',category:'Technology',website:''}
