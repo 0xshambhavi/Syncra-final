@@ -8,6 +8,9 @@ from pathlib import Path
 from contextlib import contextmanager
 import hashlib, hmac, json, os, secrets, sqlite3
 
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parents[1] / '.env')
+
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
@@ -110,7 +113,7 @@ init_auth_db()
 class Signup(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8,max_length=128)
-    role: Literal["student","president","faculty"]="student"
+    role: Literal["student","faculty"]="student"
     student_id: str|None=Field(default=None,max_length=64)
     full_name: str=Field(min_length=2,max_length=100)
     department: str|None=Field(default=None,max_length=120)
@@ -122,6 +125,29 @@ class VerifyEmail(BaseModel):
 class Login(BaseModel):
     email: EmailStr
     password: str=Field(min_length=1,max_length=128)
+
+class ProvisionPresident(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=12, max_length=128)
+    full_name: str = Field(min_length=2, max_length=100)
+    club_name: str
+
+class BudgetDecision(BaseModel):
+    decision: Literal["approve", "revision", "reject"]
+    remarks: str | None = None
+
+class EventUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=120)
+    date: str | None = None
+    time: str | None = None
+    end_date: str | None = None
+    end_time: str | None = None
+    venue: str | None = None
+    description: str | None = None
+    capacity: int | None = Field(default=None, gt=0)
+    fee: float | None = Field(default=None, ge=0)
+    prize_pool: float | None = Field(default=None, ge=0)
+
 class ProvisionPrincipal(BaseModel):
     email: EmailStr
     password: str=Field(min_length=12,max_length=128)
@@ -217,6 +243,23 @@ async def login(payload: Login):
     if row["status"]=="pending_approval": raise HTTPException(status_code=403,detail="Your profile is awaiting approval by the Principal")
     if row["status"]!="active": raise HTTPException(status_code=403,detail="This account is not active. Contact your institution administrator.")
     return {"access_token":create_session(row["id"]),"token_type":"bearer","user":public_user(row)}
+
+
+@app.post("/api/v1/admin/provision-president", status_code=201)
+async def provision_president(payload: ProvisionPresident, x_admin_key: str | None = Header(default=None)):
+    expected = os.getenv("SYNCRA_ADMIN_KEY")
+    if not expected or not x_admin_key or not hmac.compare_digest(expected, x_admin_key):
+        raise HTTPException(status_code=403, detail="A valid Syncra administrator key is required")
+    club = next((c for c in CLUBS if c["name"].casefold() == payload.club_name.casefold()), None)
+    if not club: raise HTTPException(status_code=422, detail="Choose one of the six configured clubs")
+    email = str(payload.email).strip().lower()
+    uid = str(uuid4()); salt, digest = hash_password(payload.password); now = datetime.now(timezone.utc).isoformat()
+    try:
+        with db_connect() as conn:
+            conn.execute("INSERT INTO users(id,email,role,password_salt,password_hash,status,email_verified,profile_json,created_at) VALUES(?,?,'president',?,?,'active',1,?,?)",
+              (uid,email,salt,digest,json.dumps({"full_name":payload.full_name,"club_name":club["name"],"position":"President"}),now))
+    except sqlite3.IntegrityError: raise HTTPException(status_code=409, detail="An account with this email already exists")
+    return {"message":"President account provisioned","email":email,"club":club["name"],"role":"president"}
 
 @app.post("/api/v1/auth/provision-principal",status_code=201)
 async def provision_principal(payload: ProvisionPrincipal,x_admin_key: str|None=Header(default=None)):
