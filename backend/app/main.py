@@ -281,7 +281,7 @@ async def submit_budget(request: BudgetRequest, user: dict = Depends(require_rol
     return result
 
 @app.get("/api/v1/budget/requests")
-async def list_budgets(user: dict = Depends(require_role("faculty"))):
+async def list_budgets(user: dict = Depends(require_role("faculty", "principal"))):
     return list(BUDGETS.values())
 
 @app.get("/api/v1/budget/request/{event_id}")
