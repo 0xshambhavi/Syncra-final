@@ -265,6 +265,9 @@ async def provision_president(payload: ProvisionPresident, x_admin_key: str | No
     uid = str(uuid4()); salt, digest = hash_password(payload.password); now = datetime.now(timezone.utc).isoformat()
     try:
         with db_connect() as conn:
+            current_presidents = conn.execute("SELECT profile_json FROM users WHERE role='president' AND status='active'").fetchall()
+            if any(json.loads(row["profile_json"] or "{}").get("club_name","").casefold() == club["name"].casefold() for row in current_presidents):
+                raise HTTPException(status_code=409, detail="An active president is already assigned to this club")
             conn.execute("INSERT INTO users(id,email,role,password_salt,password_hash,status,email_verified,profile_json,created_at) VALUES(?,?,'president',?,?,'active',1,?,?)",
               (uid,email,salt,digest,json.dumps({"full_name":payload.full_name,"club_name":club["name"],"position":"President"}),now))
     except sqlite3.IntegrityError: raise HTTPException(status_code=409, detail="An account with this email already exists")
