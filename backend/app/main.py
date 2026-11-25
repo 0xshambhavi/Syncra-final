@@ -495,3 +495,8 @@ async def ai_event_reader(payload: dict, user: dict = Depends(require_role("pres
     except Exception as exc:
         raise HTTPException(status_code=502, detail="OpenAI request failed. Check API billing, model access and backend logs.") from exc
 
+
+
+# President portal operations (roster, attendance, feedback, volunteers, coordination and clash suggestions).
+from .president_features import install as install_president_features
+install_president_features(app, current_user=current_user, require_role=require_role, EVENTS=EVENTS, VENUES=VENUES, REGISTRATIONS=REGISTRATIONS, NOTIFICATIONS=NOTIFICATIONS, db_connect=db_connect)
