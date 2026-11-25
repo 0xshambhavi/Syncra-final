@@ -22,6 +22,8 @@ function Shell({ children, user, onLogout }: any) {
   ];
   const presidentLinks = [
     {to:'/app',label:'President workspace',icon:<LayoutDashboard size={18}/>,end:true},
+    {to:'/app/members',label:'Club members',icon:<Users size={18}/>},
+    {to:'/app/clashes',label:'Clash & collaboration',icon:<CalendarDays size={18}/>},
     {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>}
   ];
   const staffLinks = [
