@@ -50,3 +50,20 @@ These seeded local accounts use password `syncra123`:
 ## Important limitations
 
 The project is a local prototype. No real email delivery provider is configured, so development OTPs are exposed only when `SYNCRA_ENV=development`. Configure an email provider before deploying. Events, registrations, budgets and notifications remain in-memory demo data; only authentication accounts and sessions are persisted. Production deployment also needs HTTPS, rate limiting, secure secret management, managed database backups and authorization/security testing.
+
+
+## Student portal demo data and event assistant
+
+The local demo API seeds four December 2026 events: the NODE 24-hour hackathon (Dec 4–5), Alterino debugging event (Dec 25), TEDxBMSIT&M (Dec 27), and Code Red '26 (Dec 27–28). Community invite URLs and the TEDx registration QR target are sample placeholders and must be replaced with verified organiser links before a real launch. Demo speaker profiles are fictional placeholders.
+
+Student profile updates are available through `PUT /api/v1/profile`. The student's USN must match the local part of their verified `@bmsit.in` email. Profile images may be uploaded as small PNG/JPEG/WebP data URLs (1.5 MB UI limit) or supplied as an image URL.
+
+### Optional AI event assistant
+
+The event assistant endpoint is `POST /api/v1/agent/event-assistant`. Without an AI provider, it returns a grounded summary of stored event data and clearly identifies that the AI provider is not configured. To enable model-generated answers, set these environment variables before starting the backend:
+
+- `SYNCRA_AI_BASE_URL`: OpenAI-compatible API base URL (for example, the provider's `/v1` base)
+- `SYNCRA_AI_API_KEY`: API key (keep it private; never commit it)
+- `SYNCRA_AI_MODEL`: model identifier supported by that provider
+
+The server sends only the user's question and the selected event's stored fields to the configured chat-completions endpoint. Answers are instructed to use only supplied event facts and disclose missing information. Schedule conflict detection is deterministic backend logic and does not depend on the AI provider.
