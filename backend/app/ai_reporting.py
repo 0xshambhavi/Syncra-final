@@ -297,6 +297,18 @@ def _health_trigger(club, events, db_connect):
 
 
 def install(app, require_role, EVENTS, FEEDBACK, db_connect, CLUBS):
+    with db_connect() as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS club_health_snapshots(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                club TEXT NOT NULL,
+                captured_at TEXT NOT NULL,
+                member_count INTEGER NOT NULL,
+                events_in_last_90_days INTEGER NOT NULL,
+                registrations_in_last_90_days INTEGER NOT NULL
+            )"""
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_club_health_snapshots_club_date ON club_health_snapshots(club, captured_at DESC)")
     async def club_user(user=Depends(require_role("president", "faculty"))):
         return user
 
