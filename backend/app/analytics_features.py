@@ -82,7 +82,7 @@ class InstagramInput(BaseModel):
     interactions: int = Field(ge=0)
     link_clicks: int = Field(default=0, ge=0)
 
-def install(app, require_role, current_user, EVENTS):
+def install(app, require_role, current_user, EVENTS, db_connect, CLUBS):
     async def president_or_faculty(user=Depends(require_role("president", "faculty", "principal"))):
         return user
 
@@ -171,7 +171,7 @@ def install(app, require_role, current_user, EVENTS):
         return _score(event, FEEDBACK.get(event_id, []), INSTAGRAM.get(_club(user), {}), EVENT_METRICS.get(event_id, {}))
 
     from .ai_reporting import install as install_ai_reporting
-    install_ai_reporting(app, require_role=require_role, EVENTS=EVENTS, FEEDBACK=FEEDBACK)
+    install_ai_reporting(app, require_role=require_role, EVENTS=EVENTS, FEEDBACK=FEEDBACK, db_connect=db_connect, CLUBS=CLUBS)
 
     app.include_router(router)
     return FEEDBACK
