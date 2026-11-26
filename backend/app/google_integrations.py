@@ -88,8 +88,12 @@ def _save_credentials(uid, credentials, db_connect):
 
 
 def create_calendar_entry(uid: str, event: dict, db_connect):
-    """Best-effort calendar insert after registration. Returns a safe status, never a token."""
+    """Best-effort, idempotent calendar insert after registration. Never returns a token."""
     try:
+        with db_connect() as conn:
+            existing = conn.execute("SELECT google_event_id FROM google_calendar_events WHERE user_id=? AND event_id=?", (uid, event["id"])).fetchone()
+        if existing:
+            return {"status": "added", "calendar_event_id": existing["google_event_id"], "already_synced": True}
         from googleapiclient.discovery import build
         creds = _credentials(uid, db_connect)
         if not creds:
