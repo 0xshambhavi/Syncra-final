@@ -267,6 +267,9 @@ def _health_trigger(club, events, db_connect):
             "previous": previous,
             "report": None,
         }
+    existing_report = CLUB_HEALTH_REPORTS.get(club)
+    if existing_report and existing_report.get("snapshot_captured_at") == current["captured_at"]:
+        return {"triggered": True, "status": "alert", "reason": "A membership or activity decline crossed its threshold.", "current": current, "previous": previous, "report": existing_report}
     report = _llm_json(
         "You are Syncra's club health analyst. Explain the detected membership/activity decline using only the supplied measurements. "
         "Return JSON with title, executive_summary, detected_signals (array), possible_risks (array), recommended_actions (array), "
@@ -291,7 +294,7 @@ def _health_trigger(club, events, db_connect):
         }
     else:
         report.update({"method": "llm", "model": _model_name()})
-    report.update({"triggered": True, "signals": declines, "generated_at": datetime.now(timezone.utc).isoformat()})
+    report.update({"triggered": True, "signals": declines, "snapshot_captured_at": current["captured_at"], "generated_at": datetime.now(timezone.utc).isoformat()})
     CLUB_HEALTH_REPORTS[club] = report
     return {"triggered": True, "status": "alert", "reason": "A membership or activity decline crossed its threshold.", "current": current, "previous": previous, "report": report}
 
