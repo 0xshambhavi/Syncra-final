@@ -16,6 +16,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
   const [googleConnected,setGoogleConnected]=useState(false);
   const [formId,setFormId]=useState('');
   const [formBusy,setFormBusy]=useState(false);
+  const [autoSynced,setAutoSynced]=useState(false);
   const [source,setSource]=useState('student');
   const [rating,setRating]=useState(5);
   const [comments,setComments]=useState('');
@@ -23,6 +24,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
   const [instagram,setInstagram]=useState({followers:0,reach:0,impressions:0,profile_visits:0,interactions:0,link_clicks:0});
   const refresh=async()=>{setBusy(true);try{const [d,g]=await Promise.all([api<AnalyticsData>('/api/v1/president/analytics/overview'),api<any>('/api/v1/integrations/google/status').catch(()=>({connected:false}))]);setData(d);setGoogleConnected(!!g.connected);setSelected(x=>x||d.events[0]?.id||'');setInstagram(d.instagram?.source==='not_connected'?instagram:{followers:d.instagram.followers||0,reach:d.instagram.reach||0,impressions:d.instagram.impressions||0,profile_visits:d.instagram.profile_visits||0,interactions:d.instagram.interactions||0,link_clicks:d.instagram.link_clicks||0});}catch(e:any){setNotice(e.message)}finally{setBusy(false)}};
   useEffect(()=>{void refresh()},[]);
+  useEffect(()=>{if(!googleConnected||!data||autoSynced||readOnly)return;setAutoSynced(true);for(const event of data.events){api('/api/v1/president/analytics/events/'+event.id+'/google-form/sync',{method:'POST'}).catch(()=>{});}},[googleConnected,data,autoSynced,readOnly]);
   const selectedEvent=data?.events.find(e=>e.id===selected);
   const report=data?.event_reports.find(r=>r.event_id===selected);
   const chartData=useMemo(()=>data?.event_reports.map(r=>({name:r.event_title.length>18?r.event_title.slice(0,18)+'…':r.event_title,score:r.score}))||[],[data]);
