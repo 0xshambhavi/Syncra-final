@@ -137,14 +137,19 @@ def install(app, *, current_user, require_role, db_connect, EVENTS, FEEDBACK):
             row = conn.execute("SELECT updated_at FROM google_tokens WHERE user_id=?", (user["id"],)).fetchone()
         return {"connected": bool(creds), "updated_at": row["updated_at"] if row else None, "scopes": SCOPES if creds else []}
 
-    @app.get("/api/v1/integrations/google/connect")
-    async def google_connect(user=Depends(current_user)):
+    @app.post("/api/v1/integrations/google/connect-url")
+    async def google_connect_url(user=Depends(current_user)):
         from google_auth_oauthlib.flow import Flow
         config, redirect_uri = _oauth_config()
         flow = Flow.from_client_config(config, scopes=SCOPES, redirect_uri=redirect_uri)
         state = _state(user["id"])
         url, _ = flow.authorization_url(access_type="offline", include_granted_scopes="true", prompt="consent", state=state)
-        return RedirectResponse(url)
+        return {"authorization_url": url}
+
+    @app.get("/api/v1/integrations/google/connect")
+    async def google_connect(user=Depends(current_user)):
+        result = await google_connect_url(user)
+        return RedirectResponse(result["authorization_url"])
 
     @app.get("/api/v1/integrations/google/callback")
     async def google_callback(request: Request, state: str = "", code: str = "", error: str = ""):
