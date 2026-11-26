@@ -89,6 +89,8 @@ def install(app, require_role, current_user, EVENTS):
     @router.get("/overview")
     async def get_overview(user=Depends(president_or_faculty)):
         club = _club(user)
+        from .ai_reporting import _ensure_latency_demo
+        _ensure_latency_demo(EVENTS, FEEDBACK, club)
         if user["role"] != "president" and not club:
             raise HTTPException(403, "A club assignment is required.")
         if user["role"] == "principal":
