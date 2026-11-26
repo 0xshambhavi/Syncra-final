@@ -33,6 +33,14 @@ def install(app, *, current_user, require_role, EVENTS, VENUES, REGISTRATIONS, N
             raise HTTPException(status_code=403, detail="You can only manage your own club events")
         return event
 
+    class ClashCheckIn(BaseModel):
+        title: str = Field(min_length=2, max_length=160)
+        date: str
+        time: str
+        end_date: str | None = None
+        end_time: str | None = None
+        venue: str = Field(min_length=2, max_length=160)
+
     class MemberIn(BaseModel):
         name: str = Field(min_length=2, max_length=100)
         email: str = Field(min_length=5, max_length=160)
@@ -171,6 +179,33 @@ def install(app, *, current_user, require_role, EVENTS, VENUES, REGISTRATIONS, N
     async def get_coordinator(event_id: str, user=Depends(require_role("president"))):
         owned_event(event_id, user)
         return coordinator_requests.get(event_id)
+
+    @app.post("/api/v1/president/clash-check")
+    async def check_event_clash(payload: ClashCheckIn, user=Depends(require_role("president"))):
+        club = user["profile"].get("club_name")
+        draft = {
+            "id": "__draft_event__",
+            **payload.model_dump(),
+            "club": club,
+            "owner_club": club,
+            "status": "draft",
+        }
+        try:
+            start = datetime.fromisoformat(f'{draft["date"]}T{draft["time"]}')
+            end = datetime.fromisoformat(f'{draft.get("end_date") or draft["date"]}T{draft.get("end_time") or draft["time"]}')
+            if end <= start:
+                raise ValueError("End must be after start")
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Enter a valid event date and time; end must be after start.") from exc
+        analysis = analyze_schedule({**EVENTS, "__draft_event__": draft}, club)
+        conflicts = [item for item in analysis if item.get("event_id") == "__draft_event__"]
+        hard_clashes = [item for item in conflicts if item.get("type") != "collaboration opportunity"]
+        return {
+            "has_clash": bool(hard_clashes),
+            "has_collaboration_opportunity": any(item.get("type") == "collaboration opportunity" for item in conflicts),
+            "warnings": conflicts,
+            "message": "Potential schedule conflict found. Review before submitting." if hard_clashes else "No direct schedule or venue clash found.",
+        }
 
     @app.get("/api/v1/president/clash-suggestions")
     async def clash_suggestions(user=Depends(require_role("president"))):
