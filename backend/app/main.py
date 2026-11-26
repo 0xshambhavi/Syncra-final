@@ -471,6 +471,9 @@ async def reduce_budget(event_id: str, payload: dict, user: dict = Depends(requi
     result["decision_by"] = user["id"]
     result["decision_at"] = datetime.now(timezone.utc).isoformat()
     result["decision_remarks"] = str(payload.get("remarks", ""))[:1000]
+    submitter = result.get("submitted_by")
+    if submitter:
+        NOTIFICATIONS.setdefault(submitter, []).append({"id": str(uuid4()), "title": "Budget approved with reduction", "message": "Your budget was approved at ₹" + f"{float(revised):,.0f}" + ". " + result["decision_remarks"], "read": False, "type": "budget_decision", "created_at": datetime.now(timezone.utc).isoformat()})
     return {"message": "Budget approved with reduction", "budget": result}
 
 @app.get("/api/v1/faculty/overview")
