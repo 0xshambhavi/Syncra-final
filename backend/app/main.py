@@ -470,11 +470,13 @@ async def faculty_overview(user: dict = Depends(require_role("faculty", "princip
     else:
         if not club: return {"club": None, "events": [], "members": [], "budgets": [], "message": "Your profile is not assigned to a club yet. Ask the Principal to assign your club."}
         scoped_events = [e for e in EVENTS.values() if e.get("owner_club") == club]
-        scoped_members = []
+        from .president_features import CLUB_MEMBERS
+        scoped_members = list(CLUB_MEMBERS.get(club, []))
         with db_connect() as conn: rows = conn.execute("SELECT id,email,role,profile_json,status FROM users WHERE status='active'").fetchall()
+        known_emails = {m.get("email", "").casefold() for m in scoped_members}
         for row in rows:
             profile = json.loads(row["profile_json"] or "{}")
-            if profile.get("club_name", "").casefold() == club.casefold() and row["role"] in ("president", "student"):
+            if profile.get("club_name", "").casefold() == club.casefold() and row["role"] in ("president", "student") and row["email"].casefold() not in known_emails:
                 scoped_members.append({"id": row["id"], "email": row["email"], "role": row["role"], "name": profile.get("full_name", row["email"]), "position": profile.get("position"), "status": row["status"]})
     scoped_budgets = list(BUDGETS.values()) if user["role"] == "principal" else [b for b in BUDGETS.values() if EVENTS.get(b["event_id"], {}).get("owner_club") == club]
     return {"club": club, "events": scoped_events, "members": scoped_members, "budgets": scoped_budgets, "campus_events": list(EVENTS.values()), "venues": list(VENUES.values())}
