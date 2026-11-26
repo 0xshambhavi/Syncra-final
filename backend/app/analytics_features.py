@@ -70,7 +70,8 @@ def install(app, require_role, current_user, EVENTS):
         if user["role"] == "principal":
             raise HTTPException(403, "Club analytics are available to the assigned club president and coordinator.")
         club_events = _events_for(club, EVENTS)
-        all_feedback = [r for rows in FEEDBACK.values() for r in rows]
+        event_ids = {e["id"] for e in club_events}
+        all_feedback = [r for event_id, rows in FEEDBACK.items() if event_id in event_ids for r in rows]
         event_reports = []
         for event in club_events:
             rows = FEEDBACK.get(event["id"], [])
