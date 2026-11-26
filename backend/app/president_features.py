@@ -6,7 +6,14 @@ from uuid import uuid4
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
 
-CLUB_MEMBERS = {}
+CLUB_MEMBERS = {
+    "TEDxBMSIT&M": [
+        {"id":"tedx-demo-member-1","name":"Aarav Demo","email":"aarav.demo@example.edu","role":"Core Team","club":"TEDxBMSIT&M","status":"Active","position":"Operations"},
+        {"id":"tedx-demo-member-2","name":"Mira Demo","email":"mira.demo@example.edu","role":"Core Team","club":"TEDxBMSIT&M","status":"Active","position":"Curation"},
+        {"id":"tedx-demo-member-3","name":"Kabir Demo","email":"kabir.demo@example.edu","role":"Member","club":"TEDxBMSIT&M","status":"Active","position":"Design"},
+        {"id":"tedx-demo-member-4","name":"Anaya Demo","email":"anaya.demo@example.edu","role":"Member","club":"TEDxBMSIT&M","status":"Active","position":"Marketing"}
+    ]
+}
 
 def install(app, *, current_user, require_role, EVENTS, VENUES, REGISTRATIONS, NOTIFICATIONS, db_connect):
     members = CLUB_MEMBERS
