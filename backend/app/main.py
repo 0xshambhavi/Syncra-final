@@ -441,6 +441,9 @@ async def budget_decision(event_id: str, payload: BudgetDecision, user: dict = D
     result["decision_by"] = user["id"]
     result["decision_at"] = datetime.now(timezone.utc).isoformat()
     result["decision_remarks"] = payload.remarks
+    submitter = result.get("submitted_by")
+    if submitter:
+        NOTIFICATIONS.setdefault(submitter, []).append({"id": str(uuid4()), "title": "Budget decision: " + payload.decision.replace("_", " ").title(), "message": f"Your event budget has been marked {payload.decision.replace("_", " ")}. {payload.remarks or ""}".strip(), "read": False, "type": "budget_decision", "created_at": datetime.now(timezone.utc).isoformat()})
     return {"message": f"Budget {payload.decision}", "budget": result}
 
 @app.post("/api/v1/budget/decision/{event_id}/reduce")
