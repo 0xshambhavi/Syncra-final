@@ -168,5 +168,8 @@ def install(app, require_role, current_user, EVENTS):
             raise HTTPException(404, "Event not found in your club.")
         return _score(event, FEEDBACK.get(event_id, []), INSTAGRAM.get(_club(user), {}), EVENT_METRICS.get(event_id, {}))
 
+    from .ai_reporting import install as install_ai_reporting
+    install_ai_reporting(app, require_role=require_role, EVENTS=EVENTS, FEEDBACK=FEEDBACK)
+
     app.include_router(router)
     return FEEDBACK
