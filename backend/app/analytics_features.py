@@ -58,11 +58,6 @@ class InstagramInput(BaseModel):
     interactions: int = Field(ge=0)
     link_clicks: int = Field(default=0, ge=0)
 
-@router.get("/overview")
-async def overview(user=Depends(lambda: None)):
-    # replaced by install() dependency wrapper below
-    return {}
-
 def install(app, require_role, current_user, EVENTS):
     async def president_or_faculty(user=Depends(require_role("president", "faculty", "principal"))):
         return user
