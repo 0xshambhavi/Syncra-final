@@ -61,7 +61,8 @@ export default function StudentPortal({user}:{user:any}) {
   const [profileUsn,setProfileUsn]=useState(user?.student_id||'');
   const [profilePhoto,setProfilePhoto]=useState(user?.profile?.profile_picture_url||'');
   const [profileSaving,setProfileSaving]=useState(false);
-  const [googleConnected,setGoogleConnected]=useState(false);\n  const [calendarSyncByEvent,setCalendarSyncByEvent]=useState<Record<string,string>>({});
+  const [googleConnected,setGoogleConnected]=useState(false);
+  const [calendarSyncByEvent,setCalendarSyncByEvent]=useState<Record<string,string>>({});
   useEffect(()=>{api<any>('/api/v1/integrations/google/status').then(x=>setGoogleConnected(!!x.connected)).catch(()=>setGoogleConnected(false))},[]);
   async function connectGoogle(){try{const r=await api<any>('/api/v1/integrations/google/connect-url',{method:'POST'});window.location.href=r.authorization_url}catch(e:any){notify(e.message||'Could not start Google connection')}}
 
@@ -95,7 +96,8 @@ export default function StudentPortal({user}:{user:any}) {
       const result=await api<any>(`/api/v1/events/${e.id}/register`,{method:'POST'});
       setRegistered(prev=>prev.includes(e.id)?prev:[...prev,e.id]);
       setEvents(prev=>prev.map(x=>x.id===e.id?{...x,registered:result.event?.registered??x.registered+1}:x));
-      setSelectedEvent({...e,registered:result.event?.registered??e.registered+1});\n      setCalendarSyncByEvent(prev=>({...prev,[e.id]:result.calendar_sync?.status||'not_connected'}));
+      setSelectedEvent({...e,registered:result.event?.registered??e.registered+1});
+      setCalendarSyncByEvent(prev=>({...prev,[e.id]:result.calendar_sync?.status||'not_connected'}));
       if(result.conflicts?.length) notify("You’re registered. There is also a schedule conflict with "+result.conflicts.map((c:any)=>c.title).join(", "));
       else if(result.calendar_sync?.status==='added') notify('You’re registered — this event is now in your Google Calendar.');
       else if(result.calendar_sync?.status==='not_connected') notify('You’re registered! Connect Google Calendar from your Profile to sync this event.');
