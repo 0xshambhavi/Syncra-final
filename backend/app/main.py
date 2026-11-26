@@ -373,6 +373,17 @@ async def register_event(event_id: str, user: dict = Depends(require_role("stude
     calendar_sync = create_calendar_entry(user["id"], event, db_connect) if user["role"] == "student" else {"status": "not_applicable"}
     if conflicts:
         NOTIFICATIONS.setdefault(user["id"], []).append({"id":str(uuid4()),"title":"Event schedule conflict","message":f"{event['title']} overlaps with "+", ".join(c["title"] for c in conflicts)+". Review your registered events.","read":False,"type":"schedule_conflict","created_at":datetime.now(timezone.utc).isoformat()})
+    if user["role"] == "student":
+        if calendar_sync.get("status") == "added":
+            calendar_message = f"{event['title']} is confirmed and has been added to your Google Calendar."
+            calendar_title = "Added to Google Calendar"
+        elif calendar_sync.get("status") == "not_connected":
+            calendar_message = f"You are registered for {event['title']}. Connect Google Calendar from your Profile or Settings to add it to your calendar."
+            calendar_title = "Registration confirmed"
+        else:
+            calendar_message = f"You are registered for {event['title']}, but Google Calendar could not be updated. Reconnect Google Calendar and try again from My Events."
+            calendar_title = "Calendar sync needs attention"
+        NOTIFICATIONS.setdefault(user["id"], []).append({"id":str(uuid4()),"title":calendar_title,"message":calendar_message,"read":False,"type":"google_calendar_sync","event_id":event_id,"calendar_sync_status":calendar_sync.get("status"),"created_at":datetime.now(timezone.utc).isoformat()})
     return {"message": "Registration successful", "event": event, "conflicts": conflicts, "calendar_sync": calendar_sync}
 
 @app.get("/api/v1/public/events")
@@ -401,7 +412,15 @@ async def create_event(payload: EventCreate, user: dict = Depends(require_role("
 async def my_events(user: dict = Depends(current_user)):
     if user["role"] == "student":
         registered_ids = REGISTRATIONS.get(user["id"], set())
-        return [EVENTS[event_id] for event_id in registered_ids if event_id in EVENTS]
+        with db_connect() as conn:
+            synced = {row["event_id"] for row in conn.execute("SELECT event_id FROM google_calendar_events WHERE user_id=?", (user["id"],)).fetchall()}
+            connected = conn.execute("SELECT 1 FROM google_tokens WHERE user_id=?", (user["id"],)).fetchone() is not None
+        result = []
+        for event_id in registered_ids:
+            event = EVENTS.get(event_id)
+            if not event: continue
+            result.append({**event, "calendar_sync_status": "added" if event_id in synced else ("ready" if connected else "not_connected")})
+        return result
     if user["role"] == "president":
         club = user["profile"].get("club_name")
         return [e for e in EVENTS.values() if e.get("owner_club") == club]
