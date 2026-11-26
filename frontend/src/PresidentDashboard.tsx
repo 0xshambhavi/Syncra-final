@@ -43,7 +43,18 @@ export default function PresidentDashboard({user}:{user:any}) {
   const refresh=async()=>{setBusy(true);try{const [e,b]=await Promise.all([api<EventItem[]>('/api/v1/my/events'),api<any[]>('/api/v1/my/budgets').catch(()=>[])]);setEvents(e);setBudgets(b)}catch(err:any){setNotice(err.message)}finally{setBusy(false)}};
   useEffect(()=>{void refresh(); api<any[]>('/api/v1/president/members').then(setMembers).catch(()=>{}); api<any[]>('/api/v1/president/clash-suggestions').then(setSuggestions).catch(()=>{}); api<any[]>('/api/v1/notifications').then(setInbox).catch(()=>{}); api<EventItem[]>('/api/v1/events').then(setCampusEvents).catch(()=>{});},[]);
   async function analyzeClashes(){setClashBusy(true);try{const latest=await api<any[]>('/api/v1/president/clash-suggestions');setSuggestions(latest);setNotice('Campus schedule analysis completed.');}catch(err:any){setNotice(err.message)}finally{setClashBusy(false)}}
-  async function createEvent(e:FormEvent){e.preventDefault();try{await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});setNotice('Event submitted for faculty review.');setShowEvent(false);setTitle('');await refresh()}catch(err:any){setNotice(err.message)}}
+  async function createEvent(e:FormEvent){e.preventDefault();try{
+    const check=await api<any>('/api/v1/president/clash-check',{method:'POST',body:JSON.stringify({title,date,time,end_date:endDate,end_time:endTime,venue})});
+    const hardClashes=(check.warnings||[]).filter((x:any)=>x.type!=='collaboration opportunity');
+    if(hardClashes.length){
+      const detail=hardClashes.map((x:any)=>'• '+x.other_event+' ('+x.other_club+')\\n  '+(x.ai_reason||x.reason)+'\\n  '+(x.evidence?.overlap?'Overlap: '+x.evidence.overlap:'')+'\\n  '+(x.suggestion||'')).join('\\n\\n');
+      const proceed=window.confirm('SYNCra EVENT CLASH WARNING\\n\\nThis event conflicts with an existing campus event:\\n\\n'+detail+'\\n\\nDo you still want to submit this event?');
+      if(!proceed){setNotice('Submission paused. Adjust the event date, time or venue and try again.');return;}
+    }
+    await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});
+    setNotice(hardClashes.length?'Event submitted after you acknowledged the clash warning.':'No clash detected. Event submitted for faculty review.');
+    setShowEvent(false);setTitle('');await refresh();
+  }catch(err:any){setNotice(err.message)}}
   async function submitBudget(e:FormEvent){e.preventDefault();const items=Object.entries(amounts).filter(([,v])=>v>0).map(([category,amount])=>({category,amount,justification:remarks}));const total_amount=items.reduce((n,i)=>n+i.amount,0);if(!selectedEvent||!items.length){setNotice('Choose an event and enter at least one budget amount.');return}try{await api('/api/v1/budget/request',{method:'POST',body:JSON.stringify({event_id:selectedEvent,total_amount,items,remarks})});setNotice('Budget request submitted for review.');setShowBudget(false);await refresh()}catch(err:any){setNotice(err.message)}}
   async function readEvent(e:FormEvent){e.preventDefault();setReaderBusy(true);setAnalysis('');try{const result=await api<any>('/api/v1/ai/event-reader',{method:'POST',body:JSON.stringify(readerUrl?{url:readerUrl}:{text:readerInput})});setAnalysis(result.analysis||JSON.stringify(result,null,2))}catch(err:any){setNotice(err.message)}finally{setReaderBusy(false)}}
   const total=Object.values(amounts).reduce((a,b)=>a+b,0);
