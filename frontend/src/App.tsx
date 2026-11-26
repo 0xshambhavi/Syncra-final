@@ -96,7 +96,7 @@ function AuthPage({ onAuthenticated }: { onAuthenticated: (user:any)=>void }) {
           <label>I am a…<select value={role} onChange={e=>setRole(e.target.value)}><option value="student">Normal Student</option><option value="faculty">Faculty Coordinator</option></select></label>
           {role==='student'&&<label>Student ID (optional)<input value={studentId} onChange={e=>setStudentId(e.target.value)}/></label>}
           
-          {role==='faculty'&&<label>Department<input value={department} onChange={e=>setDepartment(e.target.value)} required/></label>}
+          {role==='faculty'&&<><label>Department<input value={department} onChange={e=>setDepartment(e.target.value)} required/></label><label>Assigned club<select value={clubName} onChange={e=>setClubName(e.target.value)} required><option value="">Choose the club you coordinate</option>{['TEDxBMSIT&M','Node','Web3','AR/VR Club','E-Cell','Alterino'].map(c=><option key={c} value={c}>{c}</option>)}</select></label></>}
           <p className="muted">{role==='student'?'Student accounts activate after email verification.':'This profile remains pending until approved by the Principal.'} Principal accounts are provisioned privately by the institution.</p>
         </>}
         <button className="btn btn-dark full" disabled={busy}>{busy?'Please wait…':mode==='login'?'Log in to Syncra':'Create account'} <ArrowRight size={16}/></button>
