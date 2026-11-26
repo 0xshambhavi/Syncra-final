@@ -4,6 +4,7 @@ The same configured OpenAI model used by Syncra's other AI-assisted workflows is
 used here. Deterministic evidence checks remain the source of truth; the LLM
 summarises evidence and proposes actions but cannot invent metrics.
 """
+import asyncio
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -194,28 +195,47 @@ def _club_activity(club, events):
     }
 
 
-def _capture_health_snapshot(club, events):
+def _capture_health_snapshot(club, events, db_connect):
     from .president_features import CLUB_MEMBERS
     roster = CLUB_MEMBERS.get(club, [])
     members = sum(1 for member in roster if str(member.get("status", "active")).casefold() not in {"inactive", "left", "removed"})
     activity = _club_activity(club, events)
     now = datetime.now(timezone.utc)
-    history = CLUB_HEALTH_HISTORY.setdefault(club, [])
-    if history and now - datetime.fromisoformat(history[-1]["captured_at"]) < timedelta(days=7):
-        return history[-1], False
     snapshot = {
         "captured_at": now.isoformat(),
         "member_count": members,
         **activity,
     }
-    history.append(snapshot)
-    del history[:-26]
+    with db_connect() as conn:
+        latest = conn.execute(
+            "SELECT captured_at, member_count, events_in_last_90_days, registrations_in_last_90_days "
+            "FROM club_health_snapshots WHERE club=? ORDER BY captured_at DESC LIMIT 1",
+            (club,),
+        ).fetchone()
+        if latest and now - datetime.fromisoformat(latest["captured_at"]) < timedelta(days=7):
+            return dict(latest), False
+        conn.execute(
+            "INSERT INTO club_health_snapshots(club,captured_at,member_count,events_in_last_90_days,registrations_in_last_90_days) "
+            "VALUES(?,?,?,?,?)",
+            (club, snapshot["captured_at"], snapshot["member_count"], snapshot["events_in_last_90_days"], snapshot["registrations_in_last_90_days"]),
+        )
+        conn.execute(
+            "DELETE FROM club_health_snapshots WHERE club=? AND id NOT IN "
+            "(SELECT id FROM club_health_snapshots WHERE club=? ORDER BY captured_at DESC LIMIT 26)",
+            (club, club),
+        )
     return snapshot, True
 
 
-def _health_trigger(club, events):
-    current, captured = _capture_health_snapshot(club, events)
-    history = CLUB_HEALTH_HISTORY.get(club, [])
+def _health_trigger(club, events, db_connect):
+    current, captured = _capture_health_snapshot(club, events, db_connect)
+    with db_connect() as conn:
+        rows = conn.execute(
+            "SELECT captured_at, member_count, events_in_last_90_days, registrations_in_last_90_days "
+            "FROM club_health_snapshots WHERE club=? ORDER BY captured_at DESC LIMIT 2",
+            (club,),
+        ).fetchall()
+    history = [dict(row) for row in rows]
     if len(history) < 2:
         return {
             "triggered": False,
@@ -225,7 +245,7 @@ def _health_trigger(club, events):
             "previous": None,
             "report": None,
         }
-    previous = history[-2]
+    previous = history[1]
     declines = []
     old_members, new_members = previous["member_count"], current["member_count"]
     if old_members > 0:
@@ -276,7 +296,7 @@ def _health_trigger(club, events):
     return {"triggered": True, "status": "alert", "reason": "A membership or activity decline crossed its threshold.", "current": current, "previous": previous, "report": report}
 
 
-def install(app, require_role, EVENTS, FEEDBACK):
+def install(app, require_role, EVENTS, FEEDBACK, db_connect, CLUBS):
     async def club_user(user=Depends(require_role("president", "faculty"))):
         return user
 
@@ -299,6 +319,25 @@ def install(app, require_role, EVENTS, FEEDBACK):
         club = user.get("profile", {}).get("club_name") or ""
         if not club:
             raise HTTPException(status_code=403, detail="Your account must be assigned to a club.")
-        return _health_trigger(club, EVENTS)
+        return _health_trigger(club, EVENTS, db_connect)
+
+    async def _weekly_health_monitor():
+        while True:
+            try:
+                from .president_features import CLUB_MEMBERS
+                club_names = {item.get("name") for item in CLUBS if item.get("name")}
+                club_names.update(CLUB_MEMBERS.keys())
+                for club_name in club_names:
+                    _capture_health_snapshot(club_name, EVENTS, db_connect)
+                    # The report is only generated after a verified snapshot comparison.
+                    _health_trigger(club_name, EVENTS, db_connect)
+            except Exception:
+                # A transient DB or model issue must not terminate the monitor.
+                pass
+            await asyncio.sleep(6 * 60 * 60)
+
+    @app.on_event("startup")
+    async def start_weekly_health_monitor():
+        asyncio.create_task(_weekly_health_monitor())
 
     app.include_router(router)
