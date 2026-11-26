@@ -9,7 +9,7 @@ import {
 import { api } from './utils/api';
 
 type CampusEvent = {
-  id: string; title: string; club: string; date: string; time: string;
+  id: string; title: string; club: string; date: string; time: string; calendar_sync_status?: string;
   venue: string; description: string; capacity: number; registered: number;
   status: string; event_type?: string; type?: string; fee?: number;
   registration_deadline?: string; seats_left?: number; guest_speakers?: {name:string;affiliation?:string;role?:string;photo?:string}[];
