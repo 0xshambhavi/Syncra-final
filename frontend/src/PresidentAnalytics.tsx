@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Activity, BarChart3, Instagram, MessageSquareText, RefreshCw, ShieldCheck, Upload } from 'lucide-react';
+import { Activity, BarChart3, Instagram, MessageSquare, RefreshCw, ShieldCheck, Upload } from 'lucide-react';
 import { api } from './utils/api';
 
 type AnalyticsData = { club:string; events:any[]; feedback:any[]; instagram:any; event_reports:any[]; club_health:any; feedback_sources:Record<string,number>; integrations:any };
@@ -33,7 +33,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
     {!data?<section className="panel">Loading your club analytics…</section>:<>
     <div className="stats-grid">
       <div className="stat-card"><span>CLUB HEALTH</span><b>{data.club_health.score}<small>/100</small></b><small>{data.club_health.label} · {data.club_health.events_scored} event reports</small><ShieldCheck/></div>
-      <div className="stat-card"><span>FEEDBACK RESPONSES</span><b>{Object.values(data.feedback_sources).reduce((a,b)=>a+b,0)}</b><small>Faculty {data.feedback_sources.faculty||0} · Students {data.feedback_sources.student||0} · Guests {data.feedback_sources.guest||0}</small><MessageSquareText/></div>
+      <div className="stat-card"><span>FEEDBACK RESPONSES</span><b>{Object.values(data.feedback_sources).reduce((a,b)=>a+b,0)}</b><small>Faculty {data.feedback_sources.faculty||0} · Students {data.feedback_sources.student||0} · Guests {data.feedback_sources.guest||0}</small><MessageSquare/></div>
       <div className="stat-card"><span>INSTAGRAM FOLLOWERS</span><b>{(data.instagram.followers||0).toLocaleString('en-IN')}</b><small>{data.instagram.engagement_rate||0}% engagement rate · {data.instagram.source==='not_connected'?'Not connected':'Snapshot imported'}</small><Instagram/></div>
     </div>
     <div className="dashboard-columns">
@@ -42,7 +42,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
     </div>
     <section className="panel" style={{marginTop:18}}><div className="panel-heading"><div><div className="eyebrow">EVENT REPORT GENERATOR</div><h2>Generate an event evaluation</h2></div><BarChart3/></div>
       <label>Choose your event<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Select an event</option>{data.events.map(e=><option key={e.id} value={e.id}>{e.title}</option>)}</select></label>
-      {selectedEvent&&<><div className="stats-grid" style={{marginTop:16}}><div className="stat-card"><span>OVERALL EVENT SCORE</span><b style={{color:scoreColor(report?.score||0)}}>{report?.score||0}<small>/100</small></b><small>{report?.grade||'Awaiting inputs'} · {report?.data_completeness||'partial'} data</small><Activity/></div><div className="stat-card"><span>AVERAGE FEEDBACK</span><b>{report?.rating_average??'—'}<small>/5</small></b><small>{report?.response_count||0} responses</small><MessageSquareText/></div><div className="stat-card"><span>ATTENDANCE / CAPACITY</span><b>{Math.round((selectedEvent.registered||0)/Math.max(1,selectedEvent.capacity||1)*100)}<small>%</small></b><small>{selectedEvent.registered||0} of {selectedEvent.capacity||0} seats</small><Activity/></div></div>
+      {selectedEvent&&<><div className="stats-grid" style={{marginTop:16}}><div className="stat-card"><span>OVERALL EVENT SCORE</span><b style={{color:scoreColor(report?.score||0)}}>{report?.score||0}<small>/100</small></b><small>{report?.grade||'Awaiting inputs'} · {report?.data_completeness||'partial'} data</small><Activity/></div><div className="stat-card"><span>AVERAGE FEEDBACK</span><b>{report?.rating_average??'—'}<small>/5</small></b><small>{report?.response_count||0} responses</small><MessageSquare/></div><div className="stat-card"><span>ATTENDANCE / CAPACITY</span><b>{Math.round((selectedEvent.registered||0)/Math.max(1,selectedEvent.capacity||1)*100)}<small>%</small></b><small>{selectedEvent.registered||0} of {selectedEvent.capacity||0} seats</small><Activity/></div></div>
       <h3 style={{marginTop:20}}>Success criteria (weighted score out of 100)</h3><p className="muted">Attendance 20% · Satisfaction 25% · Objective delivery 20% · Operations 15% · Budget discipline 10% · Digital engagement 10%.</p>
       <div className="form-grid">{Object.entries(report?.criteria||{}).map(([k,v]:any)=><div className="settings-row" key={k}><b>{k.replace(/_/g,' ')}</b><span>{v}/100</span></div>)}</div>
       <form className="create-form" onSubmit={saveMetrics}><h3>Record organiser evaluation</h3><p className="muted">Enter evidence-based scores after the event. These are kept separate from respondent ratings.</p><div className="form-grid">{Object.entries(metrics).map(([k,v])=><label key={k}>{k.replace(/_/g,' ')} (0–100)<input type="number" min="0" max="100" value={v} onChange={e=>setMetrics({...metrics,[k]:Number(e.target.value)})}/></label>)}</div><button className="btn btn-dark">Save evaluation inputs</button></form>
