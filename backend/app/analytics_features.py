@@ -19,28 +19,26 @@ def _events_for(club, events):
 def _score(event, feedback, instagram, metrics):
     responses = feedback
     ratings = [float(x.get("rating", 0)) for x in responses if x.get("rating") not in (None, "")]
-    satisfaction = (sum(ratings) / len(ratings) / 5 * 100) if ratings else 0
+    satisfaction = (sum(ratings) / len(ratings) / 5 * 100) if ratings else None
     registered = max(0, int(event.get("registered", 0)))
     capacity = max(1, int(event.get("capacity", 1)))
     turnout = min(100, registered / capacity * 100)
     m = metrics or {}
-    objective = float(m.get("objective_delivery", 70 if responses else 0))
-    operations = float(m.get("operations", 70 if responses else 0))
-    budget = float(m.get("budget_discipline", 75 if event.get("id") else 0))
-    reach = float(instagram.get("engagement_rate", 0))
-    social = min(100, reach * 10)
+    social = min(100, float(instagram.get("engagement_rate", 0)) * 10) if instagram.get("source") not in (None, "not_connected") else None
     criteria = {
         "attendance_and_reach": round(turnout, 1),
-        "audience_satisfaction": round(satisfaction, 1),
-        "objective_delivery": round(max(0, min(100, objective)), 1),
-        "operations_and_experience": round(max(0, min(100, operations)), 1),
-        "budget_discipline": round(max(0, min(100, budget)), 1),
-        "digital_engagement": round(social, 1),
+        "audience_satisfaction": round(satisfaction, 1) if satisfaction is not None else None,
+        "objective_delivery": round(float(m["objective_delivery"]), 1) if m.get("objective_delivery") is not None else None,
+        "operations_and_experience": round(float(m["operations"]), 1) if m.get("operations") is not None else None,
+        "budget_discipline": round(float(m["budget_discipline"]), 1) if m.get("budget_discipline") is not None else None,
+        "digital_engagement": round(social, 1) if social is not None else None,
     }
     weights = {"attendance_and_reach": .20, "audience_satisfaction": .25, "objective_delivery": .20, "operations_and_experience": .15, "budget_discipline": .10, "digital_engagement": .10}
-    score = round(sum(criteria[k] * weights[k] for k in weights))
-    rated = bool(ratings) and bool(metrics)
-    return {"event_id": event["id"], "event_title": event["title"], "score": score, "grade": "Excellent" if score >= 85 else "Good" if score >= 70 else "Needs improvement" if score >= 50 else "At risk", "criteria": criteria, "weights": weights, "response_count": len(responses), "rating_average": round(sum(ratings)/len(ratings), 2) if ratings else None, "data_completeness": "complete" if rated else "partial", "generated_at": datetime.now(timezone.utc).isoformat()}
+    available = [k for k, value in criteria.items() if value is not None]
+    total_weight = sum(weights[k] for k in available)
+    score = round(sum(criteria[k] * weights[k] for k in available) / total_weight) if total_weight else 0
+    missing = [k for k, value in criteria.items() if value is None]
+    return {"event_id": event["id"], "event_title": event["title"], "score": score, "grade": "Excellent" if score >= 85 else "Good" if score >= 70 else "Needs improvement" if score >= 50 else "At risk", "criteria": criteria, "weights": weights, "response_count": len(responses), "rating_average": round(sum(ratings)/len(ratings), 2) if ratings else None, "data_completeness": "complete" if not missing else "partial", "missing_criteria": missing, "scored_criteria": available, "generated_at": datetime.now(timezone.utc).isoformat()}
 
 class FeedbackInput(BaseModel):
     event_id: str
