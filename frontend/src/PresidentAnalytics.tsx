@@ -30,7 +30,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
   useEffect(()=>{if(!googleConnected||!data||autoSynced||readOnly)return;setAutoSynced(true);void Promise.all(data.events.map(event=>api('/api/v1/president/analytics/events/'+event.id+'/google-form/sync',{method:'POST'}).catch(()=>null))).then(()=>refresh());},[googleConnected,data,autoSynced,readOnly]);
   const selectedEvent=data?.events.find(e=>e.id===selected);
   const report=data?.event_reports.find(r=>r.event_id===selected);
-  useEffect(()=>{if(selectedEvent?.demo_sample&&!aiReport&&!reportBusy){void generateAiReport()}},[selectedEvent?.id]);
+  useEffect(()=>{setAiReport(null);if(selectedEvent?.demo_sample){void generateAiReport()}},[selectedEvent?.id]);
   const chartData=useMemo(()=>data?.event_reports.map(r=>({name:r.event_title.length>18?r.event_title.slice(0,18)+'…':r.event_title,score:r.score}))||[],[data]);
   async function submitFeedback(e:FormEvent){e.preventDefault();try{await api('/api/v1/president/analytics/feedback',{method:'POST',body:JSON.stringify({event_id:selected,source,rating,comments})});setComments('');setNotice('Feedback response added to the event report.');await refresh()}catch(err:any){setNotice(err.message)}}
   async function importCsv(e:FormEvent){e.preventDefault();try{const result=await api<any>('/api/v1/president/analytics/feedback/import-csv',{method:'POST',body:JSON.stringify({event_id:selected,csv})});setNotice('Imported '+result.imported+' Google Forms responses.');setCsv('');await refresh()}catch(err:any){setNotice(err.message)}}
