@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from './utils/api';
 import PresidentAnalytics from './PresidentAnalytics';
-import { CalendarDays, Plus, Wallet, Sparkles, Clock3, MapPin, RefreshCw } from 'lucide-react';
+import { CalendarDays, Plus, Wallet, Sparkles, Clock3, MapPin, RefreshCw, AlertTriangle, X, Lightbulb } from 'lucide-react';
 
 type EventItem = {id:string;title:string;club:string;date:string;time:string;venue:string;description:string;capacity:number;registered:number;status:string;end_date?:string;end_time?:string};
 const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n||0);
@@ -25,6 +25,7 @@ export default function PresidentDashboard({user}:{user:any}) {
   const [notice,setNotice]=useState('');
   const [showEvent,setShowEvent]=useState(false);
   const [showBudget,setShowBudget]=useState(false);
+  const [clashWarnings,setClashWarnings]=useState<any[]>([]);
   const [title,setTitle]=useState('');
   const [date,setDate]=useState('2026-12-15');
   const [time,setTime]=useState('10:00');
@@ -43,18 +44,25 @@ export default function PresidentDashboard({user}:{user:any}) {
   const refresh=async()=>{setBusy(true);try{const [e,b]=await Promise.all([api<EventItem[]>('/api/v1/my/events'),api<any[]>('/api/v1/my/budgets').catch(()=>[])]);setEvents(e);setBudgets(b)}catch(err:any){setNotice(err.message)}finally{setBusy(false)}};
   useEffect(()=>{void refresh(); api<any[]>('/api/v1/president/members').then(setMembers).catch(()=>{}); api<any[]>('/api/v1/president/clash-suggestions').then(setSuggestions).catch(()=>{}); api<any[]>('/api/v1/notifications').then(setInbox).catch(()=>{}); api<EventItem[]>('/api/v1/events').then(setCampusEvents).catch(()=>{});},[]);
   async function analyzeClashes(){setClashBusy(true);try{const latest=await api<any[]>('/api/v1/president/clash-suggestions');setSuggestions(latest);setNotice('Campus schedule analysis completed.');}catch(err:any){setNotice(err.message)}finally{setClashBusy(false)}}
-  async function createEvent(e:FormEvent){e.preventDefault();try{
-    const check=await api<any>('/api/v1/president/clash-check',{method:'POST',body:JSON.stringify({title,date,time,end_date:endDate,end_time:endTime,venue})});
-    const hardClashes=(check.warnings||[]).filter((x:any)=>x.type!=='collaboration opportunity');
-    if(hardClashes.length){
-      const detail=hardClashes.map((x:any)=>'• '+x.other_event+' ('+x.other_club+')\\n  '+(x.ai_reason||x.reason)+'\\n  '+(x.evidence?.overlap?'Overlap: '+x.evidence.overlap:'')+'\\n  '+(x.suggestion||'')).join('\\n\\n');
-      const proceed=window.confirm('SYNCra EVENT CLASH WARNING\\n\\nThis event conflicts with an existing campus event:\\n\\n'+detail+'\\n\\nDo you still want to submit this event?');
-      if(!proceed){setNotice('Submission paused. Adjust the event date, time or venue and try again.');return;}
-    }
-    await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});
-    setNotice(hardClashes.length?'Event submitted after you acknowledged the clash warning.':'No clash detected. Event submitted for faculty review.');
-    setShowEvent(false);setTitle('');await refresh();
-  }catch(err:any){setNotice(err.message)}}
+  async function publishEvent(acknowledgedClash=false){
+    try{
+      await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});
+      setNotice(acknowledgedClash?'Event submitted. You chose to continue despite the scheduling warning.':'No clash detected. Event submitted for faculty review.');
+      setClashWarnings([]);
+      setShowEvent(false);
+      setTitle('');
+      await refresh();
+    }catch(err:any){setNotice(err.message)}
+  }
+  async function createEvent(e:FormEvent){
+    e.preventDefault();
+    try{
+      const check=await api<any>('/api/v1/president/clash-check',{method:'POST',body:JSON.stringify({title,date,time,end_date:endDate,end_time:endTime,venue})});
+      const conflicts=(check.warnings||[]).filter((x:any)=>x.type!=='collaboration opportunity');
+      if(conflicts.length){setClashWarnings(conflicts);return;}
+      await publishEvent(false);
+    }catch(err:any){setNotice(err.message)}
+  }
   async function submitBudget(e:FormEvent){e.preventDefault();const items=Object.entries(amounts).filter(([,v])=>v>0).map(([category,amount])=>({category,amount,justification:remarks}));const total_amount=items.reduce((n,i)=>n+i.amount,0);if(!selectedEvent||!items.length){setNotice('Choose an event and enter at least one budget amount.');return}try{await api('/api/v1/budget/request',{method:'POST',body:JSON.stringify({event_id:selectedEvent,total_amount,items,remarks})});setNotice('Budget request submitted for review.');setShowBudget(false);await refresh()}catch(err:any){setNotice(err.message)}}
   async function readEvent(e:FormEvent){e.preventDefault();setReaderBusy(true);setAnalysis('');try{const result=await api<any>('/api/v1/ai/event-reader',{method:'POST',body:JSON.stringify(readerUrl?{url:readerUrl}:{text:readerInput})});setAnalysis(result.analysis||JSON.stringify(result,null,2))}catch(err:any){setNotice(err.message)}finally{setReaderBusy(false)}}
   const total=Object.values(amounts).reduce((a,b)=>a+b,0);
@@ -87,5 +95,36 @@ export default function PresidentDashboard({user}:{user:any}) {
       <form className="create-form" onSubmit={e=>{e.preventDefault();void action('/api/v1/president/events/'+activeEvent+'/coordinator-request',{faculty_email:facultyEmail,note:coordinatorNote})}}><h3>Request faculty coordinator</h3><label>Faculty institutional email<input type="email" required value={facultyEmail} onChange={e=>setFacultyEmail(e.target.value)}/></label><label>Note<textarea value={coordinatorNote} onChange={e=>setCoordinatorNote(e.target.value)}/></label><button className="btn btn-dark">Send coordinator request</button><small className="muted">Faculty appointment remains subject to faculty/institution confirmation.</small></form></div>
       <form className="create-form" onSubmit={e=>{e.preventDefault();void api('/api/v1/events/'+activeEvent,{method:'PATCH',body:JSON.stringify({title:editTitle})}).then(()=>setNotice('Event updated.')).catch((err:any)=>setNotice(err.message))}}><h3>Quick event edit</h3><label>Updated event title<input required value={editTitle} onChange={e=>setEditTitle(e.target.value)} placeholder={events.find(x=>x.id===activeEvent)?.title}/></label><button className="btn btn-outline">Save title change</button></form><button className="btn btn-outline" onClick={()=>void api('/api/v1/president/events/'+activeEvent,{method:'DELETE'}).then(()=>{setNotice('Event marked cancelled.');void refresh()}).catch((err:any)=>setNotice(err.message))}>Cancel event</button></>}
     </section>}
+    {clashWarnings.length>0&&<div role="presentation" onClick={()=>setClashWarnings([])} style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(18,24,32,.58)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}}>
+      <section role="dialog" aria-modal="true" aria-labelledby="clash-dialog-title" onClick={e=>e.stopPropagation()} style={{width:'min(100%,520px)',maxHeight:'min(88vh,720px)',overflowY:'auto',background:'var(--panel,#fff)',color:'var(--text,#20242b)',borderRadius:20,boxShadow:'0 24px 80px rgba(0,0,0,.24)',padding:24,position:'relative'}}>
+        <button type="button" aria-label="Close warning" onClick={()=>setClashWarnings([])} style={{position:'absolute',right:18,top:18,border:0,background:'transparent',color:'inherit',cursor:'pointer',padding:6}}><X size={19}/></button>
+        <div style={{display:'flex',alignItems:'center',gap:13,marginBottom:18}}>
+          <div style={{width:46,height:46,borderRadius:14,display:'grid',placeItems:'center',background:'#fff3d6',color:'#a66b00',flexShrink:0}}><AlertTriangle size={23}/></div>
+          <div><div style={{fontSize:11,fontWeight:700,letterSpacing:'.09em',textTransform:'uppercase',color:'#a66b00'}}>Scheduling heads-up</div><h2 id="clash-dialog-title" style={{fontSize:22,lineHeight:1.2,margin:'4px 0 0'}}>This time slot is already booked</h2></div>
+        </div>
+        <p style={{fontSize:14,lineHeight:1.6,color:'var(--muted,#68717d)',margin:'0 0 16px'}}>We found another campus event that overlaps with your plan. You may want to coordinate with its organiser before publishing.</p>
+        <div style={{display:'grid',gap:12,marginBottom:16}}>
+          {clashWarnings.map((x:any,i:number)=><div key={i} style={{border:'1px solid var(--border,#e6e8eb)',borderRadius:14,padding:15,background:'var(--surface,#fafafa)'}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:5}}>{x.other_event||'Another campus event'}</div>
+            <div style={{fontSize:12,color:'var(--muted,#68717d)',marginBottom:12}}>Organised by {x.other_club||'another club'}</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:'8px 16px',fontSize:13}}>
+              {x.evidence?.overlap&&<span style={{display:'inline-flex',alignItems:'center',gap:6}}><Clock3 size={14}/> {x.evidence.overlap}</span>}
+              <span style={{display:'inline-flex',alignItems:'center',gap:6}}><MapPin size={14}/> {x.evidence?.same_venue||x.evidence?.other_venue===venue?'Same venue':(x.evidence?.other_venue||'Venue conflict')}</span>
+            </div>
+            {(x.ai_reason||x.reason)&&<p style={{fontSize:13,lineHeight:1.5,margin:'12px 0 0',color:'var(--muted,#68717d)'}}>{x.ai_reason||x.reason}</p>}
+          </div>)}
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'flex-start',padding:13,borderRadius:12,background:'#fff8e9',color:'#76521a',marginBottom:18}}>
+          <Lightbulb size={18} style={{flexShrink:0,marginTop:1}}/>
+          <p style={{fontSize:13,lineHeight:1.5,margin:0}}><b>Suggestion:</b> {clashWarnings[0]?.suggestion||'Consider choosing another time or venue, or coordinate with the other organiser.'}</p>
+        </div>
+        <p style={{fontSize:14,fontWeight:650,margin:'0 0 12px'}}>Would you like to publish your event anyway?</p>
+        <div style={{display:'grid',gap:9}}>
+          <button type="button" className="btn btn-coral" style={{width:'100%',justifyContent:'center'}} onClick={()=>void publishEvent(true)}>Publish event anyway</button>
+          <button type="button" className="btn btn-outline" style={{width:'100%',justifyContent:'center'}} onClick={()=>setClashWarnings([])}>Go back and make changes</button>
+        </div>
+        <p style={{fontSize:11,textAlign:'center',color:'var(--muted,#68717d)',margin:'13px 0 0'}}>This is only a recommendation. The final decision is yours.</p>
+      </section>
+    </div>}
   </div>;
 }
