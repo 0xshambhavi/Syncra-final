@@ -31,6 +31,7 @@ function Shell({ children, user, onLogout }: any) {
   const staffLinks = [
     {to:'/app',label:'Overview',icon:<LayoutDashboard size={18}/>,end:true},
     {to:'/app/events',label:'Explore events',icon:<CalendarDays size={18}/>},
+    ...(user?.role==='faculty'?[{to:'/app/analytics',label:'Club reports',icon:<LayoutDashboard size={18}/>}]:[]),
     {to:'/app/notifications',label:'Notifications',icon:<Bell size={18}/>}
   ];
   const links=student?studentLinks:user?.role==='president'?presidentLinks:staffLinks;
