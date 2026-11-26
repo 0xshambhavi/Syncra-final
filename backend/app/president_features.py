@@ -6,8 +6,10 @@ from uuid import uuid4
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
 
+CLUB_MEMBERS = {}
+
 def install(app, *, current_user, require_role, EVENTS, VENUES, REGISTRATIONS, NOTIFICATIONS, db_connect):
-    members = {}
+    members = CLUB_MEMBERS
     attendance = {}
     feedback_forms = {}
     feedback_responses = {}
