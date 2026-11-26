@@ -44,7 +44,7 @@ export default function PresidentAnalytics({user}:{user:any}) {
     {notice&&<div className="notice" role="status">{notice}<button onClick={()=>setNotice('')}>×</button></div>}
     {!data?<section className="panel">Loading your club analytics…</section>:<>
     <div className="stats-grid">
-      <div className="stat-card"><span>CLUB HEALTH</span><b>{data.club_health.score}<small>/100</small></b><small>{data.club_health.label} · {data.club_health.events_scored} event reports</small><ShieldCheck/></div>
+      <div className="stat-card"><span>CLUB HEALTH MONITOR</span><b>{healthReport?.triggered?"Alert":"Monitoring"}</b><small>{healthReport?.triggered?"A sharp membership/activity decline was detected":"A report is generated only after a sharp decline"}</small><ShieldCheck/></div>
       <div className="stat-card"><span>FEEDBACK RESPONSES</span><b>{Object.values(data.feedback_sources).reduce((a,b)=>a+b,0)}</b><small>Faculty {data.feedback_sources.faculty||0} · Students {data.feedback_sources.student||0} · Guests {data.feedback_sources.guest||0}</small><MessageSquare/></div>
       <div className="stat-card"><span>INSTAGRAM FOLLOWERS</span><b>{(data.instagram.followers||0).toLocaleString('en-IN')}</b><small>{data.instagram.engagement_rate||0}% engagement rate · {data.instagram.source==='not_connected'?'Not connected':'Snapshot imported'}</small><Instagram/></div>
     </div>
