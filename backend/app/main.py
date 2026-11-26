@@ -573,7 +573,7 @@ install_president_features(app, current_user=current_user, require_role=require_
 
 # Club analytics: feedback imports, Instagram metrics, event scoring and club health.
 from .analytics_features import install as install_analytics_features
-feedback_store = install_analytics_features(app, require_role=require_role, current_user=current_user, EVENTS=EVENTS)
+feedback_store = install_analytics_features(app, require_role=require_role, current_user=current_user, EVENTS=EVENTS, db_connect=db_connect, CLUBS=CLUBS)
 
 from .google_integrations import install as install_google_integrations
 install_google_integrations(app, current_user=current_user, require_role=require_role, db_connect=db_connect, EVENTS=EVENTS, FEEDBACK=feedback_store)
