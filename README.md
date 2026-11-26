@@ -1,25 +1,92 @@
 # Syncra
 
-A campus events platform with four access profiles: Student, Club President, Faculty Coordinator and Principal.
+**A campus events coordination platform for students, club presidents, faculty coordinators and principals.**
+
+Syncra brings campus events, registrations, club operations and institutional approvals into one workspace. Its core idea is to move beyond simply listing events: it helps teams identify scheduling conflicts, consider collaboration opportunities and coordinate event decisions.
+
+> **Project status:** Working prototype / staging deployment. This repository is not yet production-ready. Read [Limitations](#limitations-before-real-campus-use) before using real student or institutional data.
+
+## What Syncra includes
+
+| Workspace | Current capabilities |
+| --- | --- |
+| **Student** | Browse campus events, view event details, register, manage My Events, explore clubs, view notifications and update a profile. |
+| **Club President** | Manage club events, review clash and collaboration suggestions, work with venue options, manage members and volunteers, submit budgets and use the AI event reader. |
+| **Faculty Coordinator** | Review assigned-club activity, view members and events, and review budget requests with approval, reduction, revision or rejection actions. |
+| **Principal** | Campus-wide oversight, budget review and faculty-account approval workflows. |
+
+### Coordination and AI features
+
+- Rule-based event clash checks and suggested alternatives.
+- Advisory event collaboration scoring.
+- Budget review workflows with human approval decisions.
+- Optional OpenAI-powered event information extraction and written assistance.
+- Google Calendar integration endpoints and a local fallback path where configured.
+
+AI assistance is advisory: people remain responsible for event, budget and approval decisions.
+
+## Tech stack
+
+- **Frontend:** React, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS and Recharts.
+- **Backend:** Python, FastAPI and Pydantic.
+- **Authentication persistence:** SQLite for accounts and sessions.
+- **Optional integrations:** Google Calendar API and OpenAI.
+
+## Repository layout
+
+```text
+.
+├── backend/
+│   ├── app/              # FastAPI application and feature modules
+│   ├── .env.example      # Backend configuration template
+│   └── requirements.txt
+├── frontend/
+│   ├── src/              # React application
+│   └── package.json
+├── docs/                 # Integration and setup notes
+├── .env.example
+└── README.md
+```
 
 ## Run locally
 
-Requirements: Python 3.10+ and Node.js 20+.
+**Requirements:** Python 3.10+ and Node.js 20+.
 
-### Backend
+### 1. Clone and prepare the backend
 
 ```bash
+git clone https://github.com/0xshambhavi/Syncra-final.git
+cd Syncra-final
 python -m venv .venv
-# Windows: .venv\\Scripts\\activate
-# macOS/Linux: source .venv/bin/activate
+```
+
+Activate the environment:
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Install backend dependencies and start the API:
+
+```bash
 pip install -r backend/requirements.txt
 python -m uvicorn backend.app.main:app --reload --port 8000
 ```
 
-API health: http://localhost:8000/health  
-API docs: http://localhost:8000/docs
+The API is available at:
 
-### Frontend
+- Health check: [http://localhost:8000/health](http://localhost:8000/health)
+- Interactive API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 2. Start the frontend
+
+Open a second terminal from the repository root:
 
 ```bash
 cd frontend
@@ -27,47 +94,70 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173.
+Open [http://localhost:5173](http://localhost:5173).
 
-## Demo accounts
+The frontend uses `VITE_API_URL` when provided; otherwise it defaults to `http://localhost:8000`.
 
-These seeded local accounts use password `syncra123`:
+## Configuration
 
-- `student@example.edu` — Student
-- `faculty@example.edu` — Faculty Coordinator
+Copy `backend/.env.example` to `backend/.env` and set only the integrations you intend to use. Keep this file local and never commit it.
 
-## Authentication behaviour
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client credentials. |
+| `GOOGLE_REDIRECT_URI` | Must exactly match the redirect URI configured in Google Cloud. |
+| `SYNCRA_GOOGLE_TOKEN_ENCRYPTION_KEY` | Fernet key used to encrypt stored Google tokens. |
+| `SYNCRA_GOOGLE_STATE_SECRET` | Secret used to sign OAuth state. |
+| `SYNCRA_TIMEZONE` | Application timezone; default is `Asia/Kolkata`. |
+| `OPENAI_API_KEY` | Optional key for OpenAI-backed features. |
+| `LLM_ENABLED` | Enables or disables LLM features; default is `false`. |
+| `LLM_MODEL` | Model name; default is `gpt-4.1-mini`. |
 
-- Student signup requires email verification before login. In local development, the verification code is returned in the signup response and shown in the UI so the flow can be tested without an email service.
-- Club President self-signup is disabled. The institution provisions each club president through `POST /api/v1/admin/provision-president` using `X-Admin-Key`; each account is bound to one of the six configured clubs.
-- Faculty Coordinator signup collects department, then remains pending until Principal approval.
-- Principal is not a public signup option. The institution provisions this account through `POST /api/v1/auth/provision-principal` using the `X-Admin-Key` header and a configured `SYNCRA_ADMIN_KEY`.
-- Login validates credentials and account status; `/api/v1/auth/me` restores the persisted session; logout revokes the server-side session.
-- Passwords are PBKDF2-SHA256 hashed. Accounts and sessions persist in SQLite at `backend/syncra_auth.db` by default.
-- Set `INSTITUTION_EMAIL_DOMAINS` to a comma-separated allow-list of institutional domains. Leave it empty only for local development; no institution-specific domain is assumed by the code.
+For a local-only run, Google and OpenAI credentials can remain unset. Do not paste secrets into issues, pull requests or source files.
 
-## Important limitations
+## Demo access and workflows
 
-The project is a local prototype. No real email delivery provider is configured, so development OTPs are exposed only when `SYNCRA_ENV=development`. Configure an email provider before deploying. Events, registrations, budgets and notifications remain in-memory demo data; only authentication accounts and sessions are persisted. Production deployment also needs HTTPS, rate limiting, secure secret management, managed database backups and authorization/security testing.
+The local demo seeds these accounts with the password `syncra123`:
 
+| Account | Role |
+| --- | --- |
+| `student@example.edu` | Student |
+| `faculty@example.edu` | Faculty Coordinator |
 
-## Student portal demo data
+Club President and Principal accounts are restricted and must be provisioned by an administrator; they are not public demo sign-ups.
 
-The local demo API seeds four December 2026 events: the NODE 24-hour hackathon (Dec 4–5), Alterino debugging event (Dec 25), TEDxBMSIT&M (Dec 27), and Code Red '26 (Dec 27–28). Community invite URLs and the TEDx registration QR target are sample placeholders and must be replaced with verified organiser links before a real launch. Demo speaker profiles are fictional placeholders.
+A useful walkthrough:
 
-Student profile updates are available through `PUT /api/v1/profile`. The student's USN must match the local part of their verified `@bmsit.in` email. Profile images may be uploaded as small PNG/JPEG/WebP data URLs (1.5 MB UI limit) or supplied as an image URL.
+1. Sign in as a student and browse the event calendar.
+2. Open an event, register and inspect the My Events and notification views.
+3. Sign in as a club president (using a provisioned account) and create or edit an event.
+4. Review any clash warning and collaboration suggestion.
+5. Submit a budget request and review it from the faculty or principal workflow.
 
-## President, Faculty and Principal workflows
+## Deployment
 
-- Six club workspaces are configured: TEDxBMSIT&M, NODE, Web3, AR/VR Club, E-Cell and Alterino. Access Denied is intentionally excluded.
-- President accounts are invitation-only and must be provisioned by an administrator. Use a unique email and strong password per president; no shared demo president password is created.
-- Set `SYNCRA_ADMIN_KEY` in `backend/.env` to a long random secret. Set `INSTITUTION_EMAIL_DOMAINS=bmsit.in` (or the institution's actual approved domains).
-- Provision a president with `POST /api/v1/admin/provision-president`, JSON body `{"email":"club-president@bmsit.in","password":"use-a-unique-strong-password","full_name":"President Name","club_name":"NODE"}`, and header `X-Admin-Key: <SYNCRA_ADMIN_KEY>`.
-- President users can create events only for their assigned club and submit itemised INR budget requests. Faculty and Principal review pending events and budgets; Principal also approves Faculty access requests.
-- Demo budget values are synthetic estimates in INR, are marked as demo data, and must not be treated as real approved allocations.
-- The President workspace includes an OpenAI event reader. It accepts pasted event text or public HTTPS pages. It extracts only information found in the source and flags missing details; it does not automatically publish or approve events.
-- Configure `OPENAI_API_KEY`, `LLM_ENABLED=true`, `LLM_PROVIDER=openai`, and `LLM_MODEL=gpt-4.1-mini` in `backend/.env`. Never commit that file. The AI endpoint is `POST /api/v1/ai/event-reader`.
+The current staging setup uses:
 
-## Prototype limitations
+- **Frontend:** Render Static Site — `https://syncra-frontend.onrender.com`
+- **Backend:** Render Web Service — `https://syncra-api-baog.onrender.com`
+- **Deployment branch:** `pseudo-main`
 
-Event, registration, notification and budget records are still in-memory demo data and reset when the backend restarts. The AI page reader is a prototype with basic public-HTTPS checks, not a hardened production crawler. Before real campus use, move operational data to a persistent database, add audit trails and finer-grained approval rules, and complete security, accessibility and integration testing.
+The frontend is configured to call the backend using `VITE_API_URL`. The backend CORS allow-list includes the staging frontend origin. These are staging endpoints, not a production service-level guarantee.
+
+## Limitations before real campus use
+
+Syncra is a prototype and must not be treated as a production student-information system yet.
+
+- Event, registration, notification, budget and several operational records are held in in-memory demo stores and can reset when the backend restarts.
+- Authentication accounts and sessions are stored in a local SQLite database. A production deployment needs a managed persistent database, backups and a migration strategy.
+- A real email delivery provider is not configured. Do not rely on development OTP behavior for real account verification.
+- Payment processing is not a live payment integration.
+- Replace synthetic event links, sample QR targets, demo speaker details and illustrative budget values with verified information before any public campus launch.
+- Complete authorization and security testing, rate limiting, audit logging, accessibility checks, monitoring and incident-response preparation.
+- Configure production secrets and HTTPS-only OAuth redirect URLs. Never use demo credentials or real student data in a public demo.
+
+## Project direction
+
+The original product brief prioritises the landing page, role-based authentication, student experience, president operations, faculty/principal approvals, clash and collaboration coordination, budgets and notifications. Instagram insights, feedback collection, event score reports and club-health reporting were reserved as teammate-owned modules rather than part of the core build.
+
+See `docs/` for integration-specific notes. Contributions should use focused feature branches and pull requests into `main`; keep secrets and real student data out of Git.
