@@ -106,8 +106,15 @@ def init_auth_db():
         for email,role in [("student@example.edu","student"),("faculty@example.edu","faculty")]:
             if not conn.execute("SELECT 1 FROM users WHERE email=?",(email,)).fetchone():
                 uid=str(uuid4()); salt,digest=hash_password("syncra123")
-                conn.execute("INSERT INTO users(id,email,role,password_salt,password_hash,status,email_verified,profile_json,created_at) VALUES(?,?,?,?,?,'active',1,'{}',?)",
-                             (uid,email,role,salt,digest,datetime.now(timezone.utc).isoformat()))
+                profile = {"full_name":"TEDx Faculty Coordinator","department":"Faculty","club_name":"TEDxBMSIT&M"} if role=="faculty" else {}
+                conn.execute("INSERT INTO users(id,email,role,password_salt,password_hash,status,email_verified,profile_json,created_at) VALUES(?,?,?,?,?,'active',1,?,?)",
+                             (uid,email,role,salt,digest,json.dumps(profile),datetime.now(timezone.utc).isoformat()))
+        faculty = conn.execute("SELECT id,profile_json FROM users WHERE email='faculty@example.edu' AND role='faculty'").fetchone()
+        if faculty:
+            profile = json.loads(faculty["profile_json"] or "{}")
+            if not profile.get("club_name"):
+                profile.update({"full_name":profile.get("full_name") or "TEDx Faculty Coordinator","department":profile.get("department") or "Faculty","club_name":"TEDxBMSIT&M"})
+                conn.execute("UPDATE users SET profile_json=? WHERE id=?",(json.dumps(profile),faculty["id"]))
 
 def create_session(uid: str):
     token=secrets.token_urlsafe(36); now=datetime.now(timezone.utc)
@@ -556,3 +563,8 @@ async def ai_event_reader(payload: dict, user: dict = Depends(require_role("pres
 # President portal operations (roster, attendance, feedback, volunteers, coordination and clash suggestions).
 from .president_features import install as install_president_features
 install_president_features(app, current_user=current_user, require_role=require_role, EVENTS=EVENTS, VENUES=VENUES, REGISTRATIONS=REGISTRATIONS, NOTIFICATIONS=NOTIFICATIONS, db_connect=db_connect)
+
+
+# Club analytics: feedback imports, Instagram metrics, event scoring and club health.
+from .analytics_features import install as install_analytics_features
+install_analytics_features(app, require_role=require_role, current_user=current_user, EVENTS=EVENTS)
