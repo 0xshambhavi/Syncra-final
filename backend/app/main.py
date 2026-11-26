@@ -7,6 +7,7 @@ from uuid import uuid4
 from pathlib import Path
 from contextlib import contextmanager
 import hashlib, hmac, json, os, secrets, sqlite3
+from .google_integrations import create_calendar_entry
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / '.env')
@@ -368,9 +369,10 @@ async def register_event(event_id: str, user: dict = Depends(require_role("stude
     conflicts = find_event_conflicts(user["id"], event_id)
     registrations.add(event_id)
     event["registered"] += 1
+    calendar_sync = create_calendar_entry(user["id"], event, db_connect) if user["role"] == "student" else {"status": "not_applicable"}
     if conflicts:
         NOTIFICATIONS.setdefault(user["id"], []).append({"id":str(uuid4()),"title":"Event schedule conflict","message":f"{event['title']} overlaps with "+", ".join(c["title"] for c in conflicts)+". Review your registered events.","read":False,"type":"schedule_conflict","created_at":datetime.now(timezone.utc).isoformat()})
-    return {"message": "Registration successful", "event": event, "conflicts": conflicts}
+    return {"message": "Registration successful", "event": event, "conflicts": conflicts, "calendar_sync": calendar_sync}
 
 @app.get("/api/v1/public/events")
 async def public_events():
@@ -570,4 +572,7 @@ install_president_features(app, current_user=current_user, require_role=require_
 
 # Club analytics: feedback imports, Instagram metrics, event scoring and club health.
 from .analytics_features import install as install_analytics_features
-install_analytics_features(app, require_role=require_role, current_user=current_user, EVENTS=EVENTS)
+feedback_store = install_analytics_features(app, require_role=require_role, current_user=current_user, EVENTS=EVENTS)
+
+from .google_integrations import install as install_google_integrations
+install_google_integrations(app, current_user=current_user, require_role=require_role, db_connect=db_connect, EVENTS=EVENTS, FEEDBACK=feedback_store)
