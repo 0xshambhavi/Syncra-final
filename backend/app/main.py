@@ -112,7 +112,7 @@ def init_auth_db():
         faculty = conn.execute("SELECT id,profile_json FROM users WHERE email='faculty@example.edu' AND role='faculty'").fetchone()
         if faculty:
             profile = json.loads(faculty["profile_json"] or "{}")
-            if not profile.get("club_name"):
+            if profile.get("club_name") != "TEDxBMSIT&M":
                 profile.update({"full_name":profile.get("full_name") or "TEDx Faculty Coordinator","department":profile.get("department") or "Faculty","club_name":"TEDxBMSIT&M"})
                 conn.execute("UPDATE users SET profile_json=? WHERE id=?",(json.dumps(profile),faculty["id"]))
 
