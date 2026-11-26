@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from './utils/api';
+import PresidentAnalytics from './PresidentAnalytics';
 import { CalendarDays, Plus, Wallet, Sparkles, Clock3, MapPin, RefreshCw } from 'lucide-react';
 
 type EventItem = {id:string;title:string;club:string;date:string;time:string;venue:string;description:string;capacity:number;registered:number;status:string;end_date?:string;end_time?:string};
@@ -47,9 +48,10 @@ export default function PresidentDashboard({user}:{user:any}) {
   async function addMember(e:FormEvent){e.preventDefault();try{const m=await api<any>('/api/v1/president/members',{method:'POST',body:JSON.stringify({name:memberName,email:memberEmail,role:memberRole})});setMembers([...members,m]);setMemberName('');setMemberEmail('');setNotice('Member added to your club roster.')}catch(err:any){setNotice(err.message)}}
   async function loadAttendees(id:string){setActiveEvent(id);try{setAttendees(await api<any[]>(`/api/v1/president/events/${id}/attendees`))}catch(err:any){setNotice(err.message)}}
   async function action(path:string,body:any){try{await api(path,{method:'POST',body:JSON.stringify(body)});setNotice('Saved successfully.')}catch(err:any){setNotice(err.message)}}
+  if(location.pathname==='/app/analytics') return <PresidentAnalytics user={user}/>;
   return <div className="staff-dashboard">
     <header className="page-header"><div><div className="eyebrow">CLUB PRESIDENT WORKSPACE</div><h1>{club} <span>✳</span></h1><p>Plan events, request budgets and keep your team moving.</p></div><button className="btn btn-outline" onClick={()=>void refresh()}><RefreshCw size={15}/> Refresh</button></header>
-    <nav style={{display:'flex',gap:8,flexWrap:'wrap',margin:'18px 0'}}><a className="btn btn-outline" href="/app">Workspace</a><a className="btn btn-outline" href="/app/members">Club members</a><a className="btn btn-outline" href="/app/clashes">Clash & collaboration</a><a className="btn btn-outline" href="/app/notifications">Notifications</a></nav>
+    <nav style={{display:'flex',gap:8,flexWrap:'wrap',margin:'18px 0'}}><a className="btn btn-outline" href="/app">Workspace</a><a className="btn btn-outline" href="/app/members">Club members</a><a className="btn btn-outline" href="/app/clashes">Clash & collaboration</a><a className="btn btn-outline" href="/app/analytics">Analytics & reports</a><a className="btn btn-outline" href="/app/notifications">Notifications</a></nav>
     {location.pathname==='/app/notifications'&&<section className="panel"><div className="eyebrow">PRESIDENT INBOX</div><h2>Notifications</h2><p className="muted">Coordinator requests, event updates and campus notices will appear here.</p>{inbox.length?inbox.map((n:any)=><article className="settings-row" key={n.id}><div><b>{n.title}</b><p>{n.message}</p></div><span>{n.read?'Read':'New'}</span></article>):<p className="muted">No notifications yet.</p>}<p className="muted">Refresh to load the latest updates.</p></section>}
     {notice&&<div className="notice" role="status">{notice}<button onClick={()=>setNotice('')}>×</button></div>}
     {location.pathname==='/app'&&<>    <div className="stats-grid"><div className="stat-card"><span>YOUR EVENTS</span><b>{events.length.toString().padStart(2,'0')}</b><small>Events managed by your club</small><CalendarDays/></div><div className="stat-card"><span>REGISTRATIONS</span><b>{events.reduce((n,e)=>n+(e.registered||0),0)}</b><small>Across your events</small><Clock3/></div><div className="stat-card"><span>BUDGET REQUESTS</span><b>{budgets.length.toString().padStart(2,'0')}</b><small>Submitted for review</small><Wallet/></div></div>
