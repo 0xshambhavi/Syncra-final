@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from './utils/api';
+import PresidentAnalytics from './PresidentAnalytics';
 import { CalendarDays, Plus, Wallet, Sparkles, Clock3, MapPin, RefreshCw } from 'lucide-react';
 
 type EventItem = {id:string;title:string;club:string;date:string;time:string;venue:string;description:string;capacity:number;registered:number;status:string;end_date?:string;end_time?:string};
@@ -18,6 +19,7 @@ export default function PresidentDashboard({user}:{user:any}) {
   const [facultyEmail,setFacultyEmail]=useState(''); const [coordinatorNote,setCoordinatorNote]=useState('');
   const [attendanceEmail,setAttendanceEmail]=useState(''); const [editTitle,setEditTitle]=useState(''); const [inbox,setInbox]=useState<any[]>([]);
   const [events,setEvents]=useState<EventItem[]>([]);
+  const [campusEvents,setCampusEvents]=useState<EventItem[]>([]);
   const [budgets,setBudgets]=useState<any[]>([]);
   const [busy,setBusy]=useState(false);
   const [notice,setNotice]=useState('');
@@ -39,7 +41,7 @@ export default function PresidentDashboard({user}:{user:any}) {
   const [analysis,setAnalysis]=useState('');
   const [readerBusy,setReaderBusy]=useState(false);
   const refresh=async()=>{setBusy(true);try{const [e,b]=await Promise.all([api<EventItem[]>('/api/v1/my/events'),api<any[]>('/api/v1/my/budgets').catch(()=>[])]);setEvents(e);setBudgets(b)}catch(err:any){setNotice(err.message)}finally{setBusy(false)}};
-  useEffect(()=>{void refresh(); api<any[]>('/api/v1/president/members').then(setMembers).catch(()=>{}); api<any[]>('/api/v1/president/clash-suggestions').then(setSuggestions).catch(()=>{}); api<any[]>('/api/v1/notifications').then(setInbox).catch(()=>{});},[]);
+  useEffect(()=>{void refresh(); api<any[]>('/api/v1/president/members').then(setMembers).catch(()=>{}); api<any[]>('/api/v1/president/clash-suggestions').then(setSuggestions).catch(()=>{}); api<any[]>('/api/v1/notifications').then(setInbox).catch(()=>{}); api<EventItem[]>('/api/v1/events').then(setCampusEvents).catch(()=>{});},[]);
   async function createEvent(e:FormEvent){e.preventDefault();try{await api('/api/v1/events',{method:'POST',body:JSON.stringify({title,club,date,time,end_date:endDate,end_time:endTime,venue,description,capacity})});setNotice('Event submitted for faculty review.');setShowEvent(false);setTitle('');await refresh()}catch(err:any){setNotice(err.message)}}
   async function submitBudget(e:FormEvent){e.preventDefault();const items=Object.entries(amounts).filter(([,v])=>v>0).map(([category,amount])=>({category,amount,justification:remarks}));const total_amount=items.reduce((n,i)=>n+i.amount,0);if(!selectedEvent||!items.length){setNotice('Choose an event and enter at least one budget amount.');return}try{await api('/api/v1/budget/request',{method:'POST',body:JSON.stringify({event_id:selectedEvent,total_amount,items,remarks})});setNotice('Budget request submitted for review.');setShowBudget(false);await refresh()}catch(err:any){setNotice(err.message)}}
   async function readEvent(e:FormEvent){e.preventDefault();setReaderBusy(true);setAnalysis('');try{const result=await api<any>('/api/v1/ai/event-reader',{method:'POST',body:JSON.stringify(readerUrl?{url:readerUrl}:{text:readerInput})});setAnalysis(result.analysis||JSON.stringify(result,null,2))}catch(err:any){setNotice(err.message)}finally{setReaderBusy(false)}}
@@ -47,9 +49,11 @@ export default function PresidentDashboard({user}:{user:any}) {
   async function addMember(e:FormEvent){e.preventDefault();try{const m=await api<any>('/api/v1/president/members',{method:'POST',body:JSON.stringify({name:memberName,email:memberEmail,role:memberRole})});setMembers([...members,m]);setMemberName('');setMemberEmail('');setNotice('Member added to your club roster.')}catch(err:any){setNotice(err.message)}}
   async function loadAttendees(id:string){setActiveEvent(id);try{setAttendees(await api<any[]>(`/api/v1/president/events/${id}/attendees`))}catch(err:any){setNotice(err.message)}}
   async function action(path:string,body:any){try{await api(path,{method:'POST',body:JSON.stringify(body)});setNotice('Saved successfully.')}catch(err:any){setNotice(err.message)}}
+  if(location.pathname==='/app/analytics') return <PresidentAnalytics user={user}/>;
   return <div className="staff-dashboard">
     <header className="page-header"><div><div className="eyebrow">CLUB PRESIDENT WORKSPACE</div><h1>{club} <span>✳</span></h1><p>Plan events, request budgets and keep your team moving.</p></div><button className="btn btn-outline" onClick={()=>void refresh()}><RefreshCw size={15}/> Refresh</button></header>
-    <nav style={{display:'flex',gap:8,flexWrap:'wrap',margin:'18px 0'}}><a className="btn btn-outline" href="/app">Workspace</a><a className="btn btn-outline" href="/app/members">Club members</a><a className="btn btn-outline" href="/app/clashes">Clash & collaboration</a><a className="btn btn-outline" href="/app/notifications">Notifications</a></nav>
+    <nav style={{display:'flex',gap:8,flexWrap:'wrap',margin:'18px 0'}}><a className="btn btn-outline" href="/app">Workspace</a><a className="btn btn-outline" href="/app/members">Club members</a><a className="btn btn-outline" href="/app/clashes">Clash & collaboration</a><a className="btn btn-outline" href="/app/analytics">Analytics & reports</a><a className="btn btn-outline" href="/app/notifications">Notifications</a></nav>
+    {location.pathname==='/app/events'&&<section className="panel"><div className="eyebrow">CAMPUS DISCOVERY</div><h2>Explore campus events</h2><p className="muted">Browse events across campus. Your club's own events remain available in the workspace.</p>{campusEvents.length?campusEvents.map(e=><article className="dashboard-event" key={e.id}><div className="date-tile"><b>{new Date(e.date+'T00:00:00').getDate()}</b><small>{new Date(e.date+'T00:00:00').toLocaleString('en',{month:'short'}).toUpperCase()}</small></div><div className="dashboard-event-info"><span>{e.club} · {e.status}</span><h3>{e.title}</h3><small>{e.date} · {e.time} · {e.venue}</small><p className="muted">{e.description}</p></div></article>):<p className="muted">No campus events are available yet.</p>}</section>}
     {location.pathname==='/app/notifications'&&<section className="panel"><div className="eyebrow">PRESIDENT INBOX</div><h2>Notifications</h2><p className="muted">Coordinator requests, event updates and campus notices will appear here.</p>{inbox.length?inbox.map((n:any)=><article className="settings-row" key={n.id}><div><b>{n.title}</b><p>{n.message}</p></div><span>{n.read?'Read':'New'}</span></article>):<p className="muted">No notifications yet.</p>}<p className="muted">Refresh to load the latest updates.</p></section>}
     {notice&&<div className="notice" role="status">{notice}<button onClick={()=>setNotice('')}>×</button></div>}
     {location.pathname==='/app'&&<>    <div className="stats-grid"><div className="stat-card"><span>YOUR EVENTS</span><b>{events.length.toString().padStart(2,'0')}</b><small>Events managed by your club</small><CalendarDays/></div><div className="stat-card"><span>REGISTRATIONS</span><b>{events.reduce((n,e)=>n+(e.registered||0),0)}</b><small>Across your events</small><Clock3/></div><div className="stat-card"><span>BUDGET REQUESTS</span><b>{budgets.length.toString().padStart(2,'0')}</b><small>Submitted for review</small><Wallet/></div></div>
