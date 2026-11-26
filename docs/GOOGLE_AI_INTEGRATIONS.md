@@ -43,9 +43,9 @@ Each student connects their own Google account from Syncra. OAuth requests the `
 4. Attach it to the event with `PUT /api/v1/president/analytics/events/{event_id}/google-form`, body `{"form_id":"YOUR_FORM_ID"}`.
 5. Trigger `POST /api/v1/president/analytics/events/{event_id}/google-form/sync` to import new responses. Repeated syncs deduplicate by Google Forms response ID.
 
-The Google account used to connect must have access to the Form. Forms API access is read-only. The sync endpoint is ready for a scheduled background job; this first implementation uses an explicit sync trigger rather than claiming an always-on webhook.
+The Google account used to connect must have access to the Form. Forms API access is read-only. The President Analytics page automatically attempts a sync for every configured event when it opens, then refreshes the generated reports. The endpoint can also be called manually. This is page-open polling, not a continuous background job or webhook; a production deployment should add a scheduled worker.
 
-## AI clash and collaboration agent
+## AI-generated event reports\n\nWhen feedback has been synced, the analytics report automatically analyses anonymous written comments. With the OpenAI key enabled, it generates a summary, sentiment counts and recurring themes; without the key, it uses a clearly labelled lightweight keyword estimate. Event scores use only available evidence and renormalise the existing criterion weights across the available criteria. Missing objective-delivery, operations, budget or digital-engagement evidence is explicitly listed as unavailable; the system no longer invents default scores for those criteria.\n\n## AI clash and collaboration agent
 
 The president clash-suggestions endpoint now uses an AI-assisted analysis when `LLM_ENABLED=true` and `OPENAI_API_KEY` is configured. It always validates model suggestions against the deterministic event pairs; otherwise it returns rule-based suggestions. It never changes event dates, venues or approvals automatically.
 
