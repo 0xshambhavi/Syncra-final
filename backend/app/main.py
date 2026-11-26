@@ -364,7 +364,8 @@ async def register_event(event_id: str, user: dict = Depends(require_role("stude
     if not event: raise HTTPException(status_code=404, detail="Event not found")
     registrations = REGISTRATIONS.setdefault(user["id"], set())
     if event_id in registrations:
-        return {"message": "You are already registered for this event", "event": event, "conflicts": find_event_conflicts(user["id"], event_id)}
+        calendar_sync = create_calendar_entry(user["id"], event, db_connect) if user["role"] == "student" else {"status": "not_applicable"}
+        return {"message": "You are already registered for this event", "event": event, "conflicts": find_event_conflicts(user["id"], event_id), "calendar_sync": calendar_sync}
     if event["registered"] >= event["capacity"]: raise HTTPException(status_code=409, detail="This event is full")
     conflicts = find_event_conflicts(user["id"], event_id)
     registrations.add(event_id)
