@@ -145,3 +145,4 @@ def install(app, require_role, current_user, EVENTS):
         return _score(event, FEEDBACK.get(event_id, []), INSTAGRAM.get(_club(user), {}), EVENT_METRICS.get(event_id, {}))
 
     app.include_router(router)
+    return FEEDBACK
