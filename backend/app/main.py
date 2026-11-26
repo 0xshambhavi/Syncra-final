@@ -419,7 +419,10 @@ async def my_budgets(user: dict = Depends(require_role("president"))):
 
 @app.get("/api/v1/budget/requests")
 async def list_budgets(user: dict = Depends(require_role("faculty", "principal"))):
-    return list(BUDGETS.values())
+    if user["role"] == "principal": return list(BUDGETS.values())
+    club = user.get("profile", {}).get("club_name")
+    if not club: return []
+    return [b for b in BUDGETS.values() if EVENTS.get(b["event_id"], {}).get("owner_club") == club]
 
 @app.get("/api/v1/budget/request/{event_id}")
 async def get_budget(event_id: str, user: dict = Depends(current_user)):
@@ -428,11 +431,57 @@ async def get_budget(event_id: str, user: dict = Depends(current_user)):
     return result
 
 @app.post("/api/v1/budget/decision/{event_id}")
-async def budget_decision(event_id: str, decision: Literal["approve", "reduce", "revision", "reject"] = "approve", user: dict = Depends(require_role("faculty", "principal"))):
+async def budget_decision(event_id: str, payload: BudgetDecision, user: dict = Depends(require_role("faculty", "principal"))):
     result = BUDGETS.get(event_id)
     if not result: raise HTTPException(status_code=404, detail="Budget not found")
-    result["status"] = decision
-    return {"message": f"Budget {decision}", "budget": result}
+    event = EVENTS.get(event_id)
+    if user["role"] == "faculty" and (not user.get("profile", {}).get("club_name") or event.get("owner_club") != user["profile"].get("club_name")):
+        raise HTTPException(status_code=403, detail="You can only review budgets for your assigned club")
+    result["status"] = payload.decision
+    result["decision_by"] = user["id"]
+    result["decision_at"] = datetime.now(timezone.utc).isoformat()
+    result["decision_remarks"] = payload.remarks
+    return {"message": f"Budget {payload.decision}", "budget": result}
+
+@app.post("/api/v1/budget/decision/{event_id}/reduce")
+async def reduce_budget(event_id: str, payload: dict, user: dict = Depends(require_role("faculty", "principal"))):
+    result = BUDGETS.get(event_id)
+    if not result: raise HTTPException(status_code=404, detail="Budget not found")
+    event = EVENTS.get(event_id)
+    if user["role"] == "faculty" and (not user.get("profile", {}).get("club_name") or event.get("owner_club") != user["profile"].get("club_name")):
+        raise HTTPException(status_code=403, detail="You can only review budgets for your assigned club")
+    revised = payload.get("revised_amount")
+    if not isinstance(revised, (int, float)) or revised <= 0 or revised >= result["total_amount"]:
+        raise HTTPException(status_code=422, detail="Enter a revised amount lower than the requested total")
+    result["original_amount"] = result["total_amount"]
+    result["approved_amount"] = float(revised)
+    result["status"] = "approved_with_reduction"
+    result["decision_by"] = user["id"]
+    result["decision_at"] = datetime.now(timezone.utc).isoformat()
+    result["decision_remarks"] = str(payload.get("remarks", ""))[:1000]
+    return {"message": "Budget approved with reduction", "budget": result}
+
+@app.get("/api/v1/faculty/overview")
+async def faculty_overview(user: dict = Depends(require_role("faculty", "principal"))):
+    club = user.get("profile", {}).get("club_name")
+    if user["role"] == "principal":
+        scoped_events = list(EVENTS.values())
+        scoped_members = []
+    else:
+        if not club: return {"club": None, "events": [], "members": [], "budgets": [], "message": "Your profile is not assigned to a club yet. Ask the Principal to assign your club."}
+        scoped_events = [e for e in EVENTS.values() if e.get("owner_club") == club]
+        scoped_members = []
+        with db_connect() as conn: rows = conn.execute("SELECT id,email,role,profile_json,status FROM users WHERE status='active'").fetchall()
+        for row in rows:
+            profile = json.loads(row["profile_json"] or "{}")
+            if profile.get("club_name", "").casefold() == club.casefold() and row["role"] in ("president", "student"):
+                scoped_members.append({"id": row["id"], "email": row["email"], "role": row["role"], "name": profile.get("full_name", row["email"]), "position": profile.get("position"), "status": row["status"]})
+    scoped_budgets = list(BUDGETS.values()) if user["role"] == "principal" else [b for b in BUDGETS.values() if EVENTS.get(b["event_id"], {}).get("owner_club") == club]
+    return {"club": club, "events": scoped_events, "members": scoped_members, "budgets": scoped_budgets, "campus_events": list(EVENTS.values()), "venues": list(VENUES.values())}
+
+@app.get("/api/v1/faculty/profile")
+async def faculty_profile(user: dict = Depends(require_role("faculty"))):
+    return {"user": user, "assigned_club": user.get("profile", {}).get("club_name"), "department": user.get("profile", {}).get("department")}
 
 @app.post("/api/v1/admin/events/{event_id}/decision")
 async def event_decision(event_id: str, decision: Literal["approve", "reject"], user: dict = Depends(require_role("faculty", "principal"))):
