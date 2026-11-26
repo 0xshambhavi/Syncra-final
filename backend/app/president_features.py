@@ -5,6 +5,7 @@ from datetime import datetime
 from uuid import uuid4
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
+from .ai_agents import analyze_schedule
 
 CLUB_MEMBERS = {
     "TEDxBMSIT&M": [
@@ -174,23 +175,7 @@ def install(app, *, current_user, require_role, EVENTS, VENUES, REGISTRATIONS, N
     @app.get("/api/v1/president/clash-suggestions")
     async def clash_suggestions(user=Depends(require_role("president"))):
         club = user["profile"].get("club_name")
-        own = [e for e in EVENTS.values() if e.get("owner_club") == club]
-        suggestions = []
-        for event in own:
-            start = datetime.fromisoformat(f"{event['date']}T{event['time']}")
-            end = datetime.fromisoformat(f"{event.get('end_date') or event['date']}T{event.get('end_time') or event['time']}")
-            for other in EVENTS.values():
-                if other["id"] == event["id"]:
-                    continue
-                other_start = datetime.fromisoformat(f"{other['date']}T{other['time']}")
-                other_end = datetime.fromisoformat(f"{other.get('end_date') or other['date']}T{other.get('end_time') or other['time']}")
-                overlap = start < other_end and other_start < end
-                same_venue = event.get("venue") == other.get("venue") and overlap
-                if overlap or same_venue:
-                    suggestions.append({"event_id": event["id"], "event_title": event["title"], "other_event": other["title"], "other_club": other.get("club"), "type": "schedule/venue conflict", "reason": "Overlapping event times" if overlap else "Venue is shared during this time window", "suggestion": "Contact the organiser to coordinate timing, venue or shared resources. No event is changed automatically."})
-                elif event.get("date") == other.get("date") and event.get("club") != other.get("club"):
-                    suggestions.append({"event_id": event["id"], "event_title": event["title"], "other_event": other["title"], "other_club": other.get("club"), "type": "collaboration opportunity", "reason": "Events are scheduled on the same day", "suggestion": "Consider a joint promotion, shared volunteers or a combined audience plan."})
-        return suggestions
+        return analyze_schedule(EVENTS, club)
 
     @app.patch("/api/v1/events/{event_id}")
     async def update_event(event_id: str, payload: dict, user=Depends(require_role("president"))):
